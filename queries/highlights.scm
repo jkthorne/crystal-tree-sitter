@@ -40,7 +40,25 @@
   "when"
   "while"
   "yield"
+  "uninitialized"
 ] @keyword
+
+; Safe navigation
+"&." @operator
+
+; Short block
+(short_block
+  method: (identifier) @function.method.call)
+
+; Type declarations
+(type_declaration
+  name: (identifier) @variable)
+(type_declaration
+  type: (type) @type)
+
+; Generic instances
+(generic_instance
+  (constant) @type)
 
 ; Literals
 (nil_literal) @constant.builtin
