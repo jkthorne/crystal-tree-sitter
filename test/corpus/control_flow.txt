@@ -1,0 +1,190 @@
+================================================================================
+If expression
+================================================================================
+
+if x > 0
+  "positive"
+end
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (if_expression
+    condition: (binary_expression
+      left: (primary
+        (identifier))
+      right: (primary
+        (integer_literal)))
+    (then_block
+      (primary
+        (string_literal
+          (string_content))))))
+
+================================================================================
+If elsif else
+================================================================================
+
+if x > 0
+  "positive"
+elsif x < 0
+  "negative"
+else
+  "zero"
+end
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (if_expression
+    condition: (binary_expression
+      left: (primary
+        (identifier))
+      right: (primary
+        (integer_literal)))
+    (then_block
+      (primary
+        (string_literal
+          (string_content))))
+    (elsif_clause
+      condition: (binary_expression
+        left: (primary
+          (identifier))
+        right: (primary
+          (integer_literal)))
+      (then_block
+        (primary
+          (string_literal
+            (string_content)))))
+    (else_clause
+      (primary
+        (string_literal
+          (string_content))))))
+
+================================================================================
+Unless expression
+================================================================================
+
+unless done
+  work
+end
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (unless_expression
+    condition: (primary
+      (identifier))
+    (then_block
+      (primary
+        (identifier)))))
+
+================================================================================
+Case expression
+================================================================================
+
+case value
+when 1
+  "one"
+when 2
+  "two"
+else
+  "other"
+end
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (case_expression
+    value: (primary
+      (identifier))
+    (when_clause
+      (when_value
+        (primary
+          (integer_literal)))
+      (then_block
+        (primary
+          (string_literal
+            (string_content)))))
+    (when_clause
+      (when_value
+        (primary
+          (integer_literal)))
+      (then_block
+        (primary
+          (string_literal
+            (string_content)))))
+    (else_clause
+      (primary
+        (string_literal
+          (string_content))))))
+
+================================================================================
+While loop
+================================================================================
+
+while x > 0
+  x = 0
+end
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (while_expression
+    condition: (binary_expression
+      left: (primary
+        (identifier))
+      right: (primary
+        (integer_literal)))
+    (then_block
+      (assignment
+        (assignment_target
+          (identifier))
+        (primary
+          (integer_literal))))))
+
+================================================================================
+Begin rescue ensure
+================================================================================
+
+begin
+  risky_operation
+rescue ex : Exception
+  cleanup
+ensure
+  final
+end
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (begin_expression
+    (primary
+      (identifier))
+    (rescue_clause
+      (rescue_param
+        (identifier)
+        (type
+          (constant)))
+      (then_block
+        (primary
+          (identifier))))
+    (ensure_clause
+      (primary
+        (identifier)))))
+
+================================================================================
+Return statement
+================================================================================
+
+def foo
+  return 42
+end
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (method_def
+    name: (identifier)
+    (return_statement
+      (primary
+        (integer_literal)))))

@@ -1,0 +1,136 @@
+================================================================================
+Simple method
+================================================================================
+
+def greet
+  puts "hello"
+end
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (method_def
+    name: (identifier)
+    (call
+      method: (identifier)
+      arguments: (argument_list_no_parens
+        (argument
+          (primary
+            (string_literal
+              (string_content))))))))
+
+================================================================================
+Method with parameters and return type
+================================================================================
+
+def add(a : Int32, b : Int32) : Int32
+  42
+end
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (method_def
+    name: (identifier)
+    (method_params
+      (param
+        name: (identifier)
+        type: (type
+          (constant)))
+      (param
+        name: (identifier)
+        type: (type
+          (constant))))
+    return_type: (type
+      (constant))
+    (primary
+      (integer_literal))))
+
+================================================================================
+Method with default parameter
+================================================================================
+
+def greet(name = "World")
+  puts name
+end
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (method_def
+    name: (identifier)
+    (method_params
+      (param
+        name: (identifier)
+        default: (primary
+          (string_literal
+            (string_content)))))
+    (call
+      method: (identifier)
+      arguments: (argument_list_no_parens
+        (argument
+          (primary
+            (identifier)))))))
+
+================================================================================
+Empty method
+================================================================================
+
+def noop
+end
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (method_def
+    name: (identifier)))
+
+================================================================================
+Private method
+================================================================================
+
+private def secret
+end
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (visibility_modifier
+    (method_def
+      name: (identifier))))
+
+================================================================================
+Method with block parameter
+================================================================================
+
+def each(&block)
+  yield
+end
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (method_def
+    name: (identifier)
+    (method_params
+      (param
+        (block_param_def
+          (identifier))))
+    (yield_expression)))
+
+================================================================================
+Method with splat
+================================================================================
+
+def foo(*args)
+end
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (method_def
+    name: (identifier)
+    (method_params
+      (param
+        (splat_param
+          (identifier))))))

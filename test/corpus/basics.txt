@@ -1,0 +1,228 @@
+================================================================================
+Require statement
+================================================================================
+
+require "json"
+require "./my_file"
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (require_statement
+    (string_literal
+      (string_content)))
+  (require_statement
+    (string_literal
+      (string_content))))
+
+================================================================================
+Integer literals
+================================================================================
+
+42
+0xff
+0o77
+0b1010
+1_000_000
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (primary
+    (integer_literal))
+  (primary
+    (integer_literal))
+  (primary
+    (integer_literal))
+  (primary
+    (integer_literal))
+  (primary
+    (integer_literal)))
+
+================================================================================
+Float literals
+================================================================================
+
+3.14
+1.0e10
+1_000.5
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (primary
+    (float_literal))
+  (primary
+    (float_literal))
+  (primary
+    (float_literal)))
+
+================================================================================
+Boolean and nil literals
+================================================================================
+
+true
+false
+nil
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (primary
+    (bool_literal))
+  (primary
+    (bool_literal))
+  (primary
+    (nil_literal)))
+
+================================================================================
+String literals
+================================================================================
+
+"hello world"
+""
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (primary
+    (string_literal
+      (string_content)))
+  (primary
+    (string_literal)))
+
+================================================================================
+Symbol literals
+================================================================================
+
+:hello
+:World
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (primary
+    (symbol_literal))
+  (primary
+    (symbol_literal)))
+
+================================================================================
+Simple assignment
+================================================================================
+
+x = 1
+name = "crystal"
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (assignment
+    (assignment_target
+      (identifier))
+    (primary
+      (integer_literal)))
+  (assignment
+    (assignment_target
+      (identifier))
+    (primary
+      (string_literal
+        (string_content)))))
+
+================================================================================
+Variables
+================================================================================
+
+local_var
+@instance_var
+@@class_var
+$global_var
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (primary
+    (identifier))
+  (primary
+    (instance_variable))
+  (primary
+    (class_variable))
+  (primary
+    (global_variable)))
+
+================================================================================
+Array literal
+================================================================================
+
+[1, 2, 3]
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (primary
+    (array_literal
+      (primary
+        (integer_literal))
+      (primary
+        (integer_literal))
+      (primary
+        (integer_literal)))))
+
+================================================================================
+Binary expression with parens
+================================================================================
+
+(1 + 2)
+(x == y)
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (primary
+    (parenthesized_expression
+      (binary_expression
+        left: (primary
+          (integer_literal))
+        right: (primary
+          (integer_literal)))))
+  (primary
+    (parenthesized_expression
+      (binary_expression
+        left: (primary
+          (identifier))
+        right: (primary
+          (identifier))))))
+
+================================================================================
+Method call with string arg
+================================================================================
+
+puts "hello"
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (call
+    method: (identifier)
+    arguments: (argument_list_no_parens
+      (argument
+        (primary
+          (string_literal
+            (string_content)))))))
+
+================================================================================
+Method call with parens
+================================================================================
+
+puts(1)
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (call
+    method: (identifier)
+    arguments: (argument_list_no_parens
+      (argument
+        (primary
+          (parenthesized_expression
+            (primary
+              (integer_literal))))))))

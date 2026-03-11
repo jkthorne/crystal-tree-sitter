@@ -1,0 +1,103 @@
+================================================================================
+String with interpolation
+================================================================================
+
+"hello #{name}"
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (primary
+    (string_literal
+      (string_content)
+      (string_interpolation
+        (interpolation_start)
+        (primary
+          (identifier))
+        (interpolation_end)))))
+
+================================================================================
+Simple interpolation only
+================================================================================
+
+"#{x}"
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (primary
+    (string_literal
+      (string_interpolation
+        (interpolation_start)
+        (primary
+          (identifier))
+        (interpolation_end)))))
+
+================================================================================
+Interpolation with expression
+================================================================================
+
+"#{1 + 2} items"
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (primary
+    (string_literal
+      (string_interpolation
+        (interpolation_start)
+        (binary_expression
+          left: (primary
+            (integer_literal))
+          right: (primary
+            (integer_literal)))
+        (interpolation_end))
+      (string_content))))
+
+================================================================================
+Multiple interpolations
+================================================================================
+
+"#{a} and #{b}"
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (primary
+    (string_literal
+      (string_interpolation
+        (interpolation_start)
+        (primary
+          (identifier))
+        (interpolation_end))
+      (string_content)
+      (string_interpolation
+        (interpolation_start)
+        (primary
+          (identifier))
+        (interpolation_end)))))
+
+================================================================================
+Empty string
+================================================================================
+
+""
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (primary
+    (string_literal)))
+
+================================================================================
+Plain string no interpolation
+================================================================================
+
+"no interpolation"
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (primary
+    (string_literal
+      (string_content))))
