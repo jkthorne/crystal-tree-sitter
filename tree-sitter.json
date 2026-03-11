@@ -1,0 +1,36 @@
+{
+  "grammars": [
+    {
+      "name": "crystal",
+      "camelcase": "Crystal",
+      "scope": "source.crystal",
+      "path": ".",
+      "file-types": [
+        "cr"
+      ],
+      "injection-regex": "^crystal$"
+    }
+  ],
+  "metadata": {
+    "version": "0.1.0",
+    "license": "MIT",
+    "description": "Crystal language grammar for tree-sitter",
+    "authors": [
+      {
+        "name": "Jack Thorne",
+        "email": "jack@myrenee.io"
+      }
+    ],
+    "links": {
+      "repository": "https://github.com/jack/tree-sitter-crystal"
+    }
+  },
+  "bindings": {
+    "c": true,
+    "node": true,
+    "rust": true,
+    "go": true,
+    "python": true,
+    "swift": true
+  }
+}
