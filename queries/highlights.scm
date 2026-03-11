@@ -68,12 +68,16 @@
 (char_literal) @character
 (string_literal) @string
 (string_content) @string
+(escape_sequence) @string.escape
 (string_interpolation) @embedded
 (interpolation_start) @punctuation.special
 (interpolation_end) @punctuation.special
 (symbol_literal) @string.special.symbol
 (regex_literal) @string.regexp
+(regex_content) @string.regexp
+(regex_flags) @string.regexp
 (command_literal) @string.special
+(command_content) @string.special
 (heredoc_literal) @string
 (heredoc_content) @string
 (percent_literal) @string
