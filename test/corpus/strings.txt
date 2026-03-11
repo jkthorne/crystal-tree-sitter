@@ -101,3 +101,240 @@ Plain string no interpolation
   (primary
     (string_literal
       (string_content))))
+
+================================================================================
+String with escape sequences
+================================================================================
+
+"hello\nworld"
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (primary
+    (string_literal
+      (string_content)
+      (escape_sequence)
+      (string_content))))
+
+================================================================================
+String with multiple escape sequences
+================================================================================
+
+"\u0041\t\\"
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (primary
+    (string_literal
+      (escape_sequence)
+      (escape_sequence)
+      (escape_sequence))))
+
+================================================================================
+String with interpolation and escape
+================================================================================
+
+"hello #{name}\n"
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (primary
+    (string_literal
+      (string_content)
+      (string_interpolation
+        (interpolation_start)
+        (primary
+          (identifier))
+        (interpolation_end))
+      (escape_sequence))))
+
+================================================================================
+Heredoc basic
+================================================================================
+
+x = <<-HEREDOC
+hello world
+HEREDOC
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (assignment
+    (assignment_target
+      (identifier))
+    (primary
+      (heredoc_literal
+        (heredoc_content)))))
+
+================================================================================
+Heredoc with interpolation
+================================================================================
+
+x = <<-HEREDOC
+hello #{name}
+HEREDOC
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (assignment
+    (assignment_target
+      (identifier))
+    (primary
+      (heredoc_literal
+        (heredoc_content)
+        (string_interpolation
+          (interpolation_start)
+          (primary
+            (identifier))
+          (interpolation_end))
+        (heredoc_content)))))
+
+================================================================================
+Percent word array
+================================================================================
+
+x = %w(hello world)
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (assignment
+    (assignment_target
+      (identifier))
+    (primary
+      (percent_literal
+        (percent_literal_content)))))
+
+================================================================================
+Percent raw string
+================================================================================
+
+x = %q(raw string)
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (assignment
+    (assignment_target
+      (identifier))
+    (primary
+      (percent_literal
+        (percent_literal_content)))))
+
+================================================================================
+Percent interpolated string
+================================================================================
+
+x = %(hello #{name})
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (assignment
+    (assignment_target
+      (identifier))
+    (primary
+      (percent_literal
+        (percent_literal_content)
+        (string_interpolation
+          (interpolation_start)
+          (primary
+            (identifier))
+          (interpolation_end))))))
+
+================================================================================
+Percent regex with flags
+================================================================================
+
+x = %r(pattern)imx
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (assignment
+    (assignment_target
+      (identifier))
+    (primary
+      (percent_literal
+        (percent_literal_content)
+        (regex_flags)))))
+
+================================================================================
+Command literal
+================================================================================
+
+x = `echo hello`
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (assignment
+    (assignment_target
+      (identifier))
+    (primary
+      (command_literal
+        (command_content)))))
+
+================================================================================
+Command literal with interpolation
+================================================================================
+
+x = `echo #{name}`
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (assignment
+    (assignment_target
+      (identifier))
+    (primary
+      (command_literal
+        (command_content)
+        (string_interpolation
+          (interpolation_start)
+          (primary
+            (identifier))
+          (interpolation_end))))))
+
+================================================================================
+Regex with flags
+================================================================================
+
+x = /pattern/imx
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (assignment
+    (assignment_target
+      (identifier))
+    (primary
+      (regex_literal
+        (regex_content)
+        (regex_flags)))))
+
+================================================================================
+Regex with interpolation
+================================================================================
+
+x = /hello #{name}/i
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (assignment
+    (assignment_target
+      (identifier))
+    (primary
+      (regex_literal
+        (regex_content)
+        (string_interpolation
+          (interpolation_start)
+          (primary
+            (identifier))
+          (interpolation_end))
+        (regex_flags)))))
