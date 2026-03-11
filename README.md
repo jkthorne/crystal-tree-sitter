@@ -1,39 +1,43 @@
-# crystal-tree-sitter
+# tree-sitter-crystal
 
-TODO: Write a description here
+A [Tree-sitter](https://tree-sitter.github.io/) grammar for the [Crystal](https://crystal-lang.org/) programming language.
 
-## Installation
+## Status
 
-1. Add the dependency to your `shard.yml`:
+**Work in progress** — Phases 1-4 implemented:
 
-   ```yaml
-   dependencies:
-     crystal-tree-sitter:
-       github: your-github-user/crystal-tree-sitter
-   ```
+- Literals (integers, floats, booleans, strings, symbols, chars, arrays, hashes, tuples, regex)
+- Variables (local, instance, class, global, constants)
+- Assignments and operator assignments
+- Method definitions (params, types, return types, splat, double splat, block params)
+- Method calls (with/without parens, blocks)
+- Classes, structs, modules, enums (with generics, inheritance)
+- Control flow (if/elsif/else, unless, case/when, while, until)
+- Exception handling (begin/rescue/ensure)
+- Type annotations and union types
+- Annotations, visibility modifiers
+- Macros (basic)
+- C bindings (lib, fun, struct, union)
+- Syntax highlighting queries
 
-2. Run `shards install`
+### Known Limitations
+
+- String interpolation (`#{}`) is not yet supported (requires external scanner)
+- Heredocs not yet supported
+- Percent literals (`%w()`, `%i()`, etc.) not yet supported
+- Binary expressions without parentheses can be ambiguous with no-paren method calls
+  (e.g., `a + b` may parse as `call a (+b)` instead of `binary a + b`)
 
 ## Usage
 
-```crystal
-require "crystal-tree-sitter"
+```bash
+npm install
+npx tree-sitter generate
+npx tree-sitter test
+npx tree-sitter parse path/to/file.cr
+npx tree-sitter highlight path/to/file.cr
 ```
 
-TODO: Write usage instructions here
+## License
 
-## Development
-
-TODO: Write development instructions here
-
-## Contributing
-
-1. Fork it (<https://github.com/your-github-user/crystal-tree-sitter/fork>)
-2. Create your feature branch (`git checkout -b my-new-feature`)
-3. Commit your changes (`git commit -am 'Add some feature'`)
-4. Push to the branch (`git push origin my-new-feature`)
-5. Create a new Pull Request
-
-## Contributors
-
-- [Jack Thorne](https://github.com/your-github-user) - creator and maintainer
+MIT

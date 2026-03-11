@@ -1,9 +1,11 @@
-/docs/
-/lib/
-/bin/
-/.shards/
+node_modules/
+build/
+target/
+src/parser.c
+src/tree_sitter/
+bindings/
 *.dwarf
-
-# Libraries don't need dependency lock
-# Dependencies will be locked in applications that use them
-/shard.lock
+*.o
+*.so
+*.dylib
+*.wasm
