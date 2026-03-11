@@ -992,12 +992,17 @@ module.exports = grammar({
         $.escape_sequence,
       )),
       $._percent_literal_end,
+      optional($.regex_flags), // For %r() literals
     ),
 
     // Regex with external scanner for disambiguation
     regex_literal: $ => seq(
       $._regex_start,
-      optional($.regex_content),
+      repeat(choice(
+        $.regex_content,
+        $.string_interpolation,
+        $.escape_sequence,
+      )),
       $._regex_end,
       optional($.regex_flags),
     ),

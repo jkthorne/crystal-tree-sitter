@@ -2128,6 +2128,10 @@
           "named": true
         },
         {
+          "type": "regex_flags",
+          "named": true
+        },
+        {
           "type": "string_interpolation",
           "named": true
         }
@@ -2332,11 +2336,19 @@
       "required": false,
       "types": [
         {
+          "type": "escape_sequence",
+          "named": true
+        },
+        {
           "type": "regex_content",
           "named": true
         },
         {
           "type": "regex_flags",
+          "named": true
+        },
+        {
+          "type": "string_interpolation",
           "named": true
         }
       ]
