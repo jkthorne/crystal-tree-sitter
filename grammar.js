@@ -978,6 +978,7 @@ module.exports = grammar({
       repeat(choice(
         $.heredoc_content,
         $.string_interpolation,
+        $.escape_sequence,
       )),
       $._heredoc_end,
     ),
@@ -988,6 +989,7 @@ module.exports = grammar({
       repeat(choice(
         $.percent_literal_content,
         $.string_interpolation,
+        $.escape_sequence,
       )),
       $._percent_literal_end,
     ),
@@ -1008,6 +1010,7 @@ module.exports = grammar({
       repeat(choice(
         $.command_content,
         $.string_interpolation,
+        $.escape_sequence,
       )),
       $._command_end,
     ),

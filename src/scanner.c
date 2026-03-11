@@ -266,14 +266,9 @@ static bool scan_string_content(TSLexer *lexer) {
         break;
 
       case '\\':
-        // Escape sequence — consume backslash and next char
-        has_content = true;
-        advance(lexer);
-        if (!lexer->eof(lexer)) {
-          advance(lexer);
-        }
+        // Stop before escape sequence so grammar can match escape_sequence token
         lexer->mark_end(lexer);
-        break;
+        return has_content;
 
       default:
         has_content = true;
@@ -305,11 +300,9 @@ static bool scan_command_content(TSLexer *lexer) {
         break;
 
       case '\\':
-        has_content = true;
-        advance(lexer);
-        if (!lexer->eof(lexer)) advance(lexer);
+        // Stop before escape sequence so grammar can match escape_sequence token
         lexer->mark_end(lexer);
-        break;
+        return has_content;
 
       default:
         has_content = true;
@@ -341,11 +334,9 @@ static bool scan_regex_content(TSLexer *lexer) {
         break;
 
       case '\\':
-        has_content = true;
-        advance(lexer);
-        if (!lexer->eof(lexer)) advance(lexer);
+        // Stop before escape sequence so grammar can match escape_sequence token
         lexer->mark_end(lexer);
-        break;
+        return has_content;
 
       default:
         has_content = true;
@@ -399,12 +390,10 @@ static bool scan_percent_content(Scanner *scanner, TSLexer *lexer) {
       continue;
     }
 
-    // Check for escape
+    // Stop before escape sequence so grammar can match escape_sequence token
     if (c == '\\') {
-      has_content = true;
-      advance(lexer);
-      if (!lexer->eof(lexer)) advance(lexer);
-      continue;
+      lexer->mark_end(lexer);
+      return has_content;
     }
 
     has_content = true;
@@ -432,12 +421,10 @@ static bool scan_heredoc_content(Scanner *scanner, TSLexer *lexer) {
       continue;
     }
 
-    // Check for escape
+    // Stop before escape sequence so grammar can match escape_sequence token
     if (c == '\\') {
-      has_content = true;
-      advance(lexer);
-      if (!lexer->eof(lexer)) advance(lexer);
-      continue;
+      lexer->mark_end(lexer);
+      return has_content;
     }
 
     // Check for potential heredoc end: newline + optional whitespace + identifier
