@@ -1,0 +1,455 @@
+================================================================================
+Safe navigation operator
+================================================================================
+
+user&.name
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (call
+    method: (identifier)
+    arguments: (argument_list_no_parens
+      (argument
+        (block_argument
+          (short_block
+            method: (identifier)))))))
+
+================================================================================
+Ternary expression
+================================================================================
+
+x > 0 ? "yes" : "no"
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (conditional_expression
+    condition: (binary_expression
+      left: (primary
+        (identifier))
+      right: (primary
+        (integer_literal)))
+    consequence: (primary
+      (string_literal
+        (string_content)))
+    alternative: (primary
+      (string_literal
+        (string_content)))))
+
+================================================================================
+Multiple assignment
+================================================================================
+
+a, b = 1, 2
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (multiple_assignment
+    (assignment_target
+      (identifier))
+    (assignment_target
+      (identifier))
+    (primary
+      (integer_literal))
+    (primary
+      (integer_literal))))
+
+================================================================================
+Type declaration
+================================================================================
+
+x : Int32 = 42
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (type_declaration
+    name: (identifier)
+    type: (type
+      (constant))
+    value: (primary
+      (integer_literal))))
+
+================================================================================
+Type declaration without value
+================================================================================
+
+name : String
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (type_declaration
+    name: (identifier)
+    type: (type
+      (constant))))
+
+================================================================================
+Generic type instantiation
+================================================================================
+
+Array(Int32).new
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (dot_expression
+    receiver: (primary
+      (generic_instance
+        (constant)
+        (type
+          (constant))))
+    method: (identifier)))
+
+================================================================================
+Short block syntax
+================================================================================
+
+[1, 2].map(&.to_s)
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (dot_expression
+    receiver: (primary
+      (array_literal
+        (primary
+          (integer_literal))
+        (primary
+          (integer_literal))))
+    method: (identifier)
+    arguments: (argument_list
+      (argument
+        (block_argument
+          (short_block
+            method: (identifier)))))))
+
+================================================================================
+Uninitialized expression
+================================================================================
+
+x = uninitialized Int32
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (assignment
+    (assignment_target
+      (identifier))
+    (uninitialized_expression
+      (type
+        (constant)))))
+
+================================================================================
+Empty array with of type
+================================================================================
+
+[] of Int32
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (primary
+    (array_literal
+      (type
+        (constant)))))
+
+================================================================================
+Empty hash with of type
+================================================================================
+
+{} of String => Int32
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (primary
+    (hash_literal
+      (type
+        (constant))
+      (type
+        (constant)))))
+
+================================================================================
+Regex literal with flags
+================================================================================
+
+/hello/i
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (primary
+    (regex_literal
+      (regex_content)
+      (regex_flags))))
+
+================================================================================
+Method chaining
+================================================================================
+
+[1, 2, 3].map { |x| x }.first
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (dot_expression
+    receiver: (dot_expression
+      receiver: (primary
+        (array_literal
+          (primary
+            (integer_literal))
+          (primary
+            (integer_literal))
+          (primary
+            (integer_literal))))
+      method: (identifier)
+      (block
+        (block_params
+          (block_param
+            (identifier)))
+        (primary
+          (identifier))))
+    method: (identifier)))
+
+================================================================================
+Scoped annotation
+================================================================================
+
+@[JSON::Field]
+class Foo
+end
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (annotation
+    (constant)
+    (constant))
+  (class_def
+    name: (type_name
+      (constant))))
+
+================================================================================
+Modifier if
+================================================================================
+
+x = 1 if condition
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (modifier_if
+    (assignment
+      (assignment_target
+        (identifier))
+      (primary
+        (integer_literal)))
+    (primary
+      (identifier))))
+
+================================================================================
+Until loop
+================================================================================
+
+until done
+  process
+end
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (until_expression
+    condition: (primary
+      (identifier))
+    (then_block
+      (primary
+        (identifier)))))
+
+================================================================================
+Case without value
+================================================================================
+
+case
+when x > 0
+  "positive"
+else
+  "zero"
+end
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (case_expression
+    (when_clause
+      (when_value
+        (binary_expression
+          left: (primary
+            (identifier))
+          right: (primary
+            (integer_literal))))
+      (then_block
+        (primary
+          (string_literal
+            (string_content)))))
+    (else_clause
+      (primary
+        (string_literal
+          (string_content))))))
+
+================================================================================
+Proc literal
+================================================================================
+
+fn = ->(x : Int32) { x + 1 }
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (assignment
+    (assignment_target
+      (identifier))
+    (primary
+      (proc_literal
+        (proc_literal_params
+          (identifier)
+          (type
+            (constant)))
+        (block
+          (call
+            method: (identifier)
+            arguments: (argument_list_no_parens
+              (argument
+                (unary_expression
+                  (primary
+                    (integer_literal)))))))))))
+
+================================================================================
+Multiple rescue clauses
+================================================================================
+
+begin
+  risky
+rescue IO::Error
+  handle_io
+rescue ex : Exception
+  handle_other
+ensure
+  cleanup
+end
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (begin_expression
+    (primary
+      (identifier))
+    (rescue_clause
+      (rescue_param
+        (type
+          (scoped_type
+            (constant)
+            (type
+              (constant)))))
+      (then_block
+        (primary
+          (identifier))))
+    (rescue_clause
+      (rescue_param
+        (identifier)
+        (type
+          (constant)))
+      (then_block
+        (primary
+          (identifier))))
+    (ensure_clause
+      (primary
+        (identifier)))))
+
+================================================================================
+Enum with methods
+================================================================================
+
+enum Color
+  Red
+  Green
+  Blue
+
+  def to_hex
+    "hex"
+  end
+end
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (enum_def
+    name: (constant)
+    (enum_member
+      (constant))
+    (enum_member
+      (constant))
+    (enum_member
+      (constant))
+    (method_def
+      name: (identifier)
+      (primary
+        (string_literal
+          (string_content))))))
+
+================================================================================
+Abstract class with abstract method
+================================================================================
+
+abstract class Shape
+  abstract def area : Float64
+end
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (class_def
+    name: (type_name
+      (constant))
+    (abstract_def
+      name: (identifier)
+      return_type: (type
+        (constant)))))
+
+================================================================================
+Hash literal
+================================================================================
+
+{"key" => "value"}
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (primary
+    (hash_literal
+      (hash_entry
+        key: (primary
+          (string_literal
+            (string_content)))
+        value: (primary
+          (string_literal
+            (string_content)))))))
+
+================================================================================
+Tuple literal
+================================================================================
+
+{1, "hello"}
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (primary
+    (tuple_literal
+      (primary
+        (integer_literal))
+      (primary
+        (string_literal
+          (string_content))))))
