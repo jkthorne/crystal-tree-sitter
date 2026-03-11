@@ -59,6 +59,7 @@ module.exports = grammar({
   conflicts: $ => [
     [$.fun_def],
     [$.argument, $.parenthesized_expression],
+    [$.assignment_target, $.primary],
   ],
 
   supertypes: $ => [
@@ -97,6 +98,8 @@ module.exports = grammar({
       $.yield_expression,
       $.alias_statement,
       $.visibility_modifier,
+      $.multiple_assignment,
+      $.type_declaration,
     ),
 
     _terminator: $ => choice('\n', ';'),
@@ -159,6 +162,7 @@ module.exports = grammar({
       $.modifier_while,
       $.modifier_until,
       $.modifier_rescue,
+      $.uninitialized_expression,
     ),
 
     // =========================================================================
@@ -185,6 +189,8 @@ module.exports = grammar({
     ),
 
     multiple_assignment: $ => prec.right(PREC.ASSIGN, seq(
+      $.assignment_target,
+      ',',
       commaSep1($.assignment_target),
       '=',
       commaSep1($.expression),
@@ -269,7 +275,7 @@ module.exports = grammar({
 
     dot_expression: $ => prec.left(PREC.DOT, seq(
       field('receiver', $.expression),
-      '.',
+      choice('.', '&.'),
       field('method', choice($.identifier, $.constant)),
       optional(field('arguments', $.argument_list)),
       optional($.block),
@@ -312,7 +318,17 @@ module.exports = grammar({
 
     double_splat_argument: $ => seq('**', $.expression),
 
-    block_argument: $ => seq('&', $.expression),
+    block_argument: $ => choice(
+      seq('&', $.expression),
+      $.short_block,
+    ),
+
+    // Short block syntax: &.method or &.method(args)
+    short_block: $ => seq(
+      '&.',
+      field('method', $.identifier),
+      optional(field('arguments', $.argument_list)),
+    ),
 
     // =========================================================================
     // BLOCKS
@@ -606,9 +622,14 @@ module.exports = grammar({
     // =========================================================================
     annotation: $ => seq(
       '@[',
-      $.constant,
+      $._annotation_name,
       optional($.argument_list),
       ']',
+    ),
+
+    _annotation_name: $ => choice(
+      $.constant,
+      seq($.constant, '::', $._annotation_name),
     ),
 
     // =========================================================================
@@ -772,6 +793,14 @@ module.exports = grammar({
     // =========================================================================
     alias_statement: $ => seq('alias', $.constant, '=', $.type),
 
+    // Type declaration: x : Int32, x : Int32 = 42
+    type_declaration: $ => prec.right(PREC.ASSIGN, seq(
+      field('name', choice($.identifier, $.instance_variable, $.class_variable)),
+      ':',
+      field('type', $.type),
+      optional(seq('=', field('value', $.expression))),
+    )),
+
     // =========================================================================
     // SPECIAL EXPRESSIONS
     // =========================================================================
@@ -789,6 +818,8 @@ module.exports = grammar({
     pointerof_expression: $ => seq('pointerof', '(', $.expression, ')'),
 
     offsetof_expression: $ => seq('offsetof', '(', $.type, ',', $.identifier, ')'),
+
+    uninitialized_expression: $ => seq('uninitialized', $.type),
 
     is_a_expression: $ => prec(PREC.COMPARE, seq(
       $.expression,
@@ -837,10 +868,19 @@ module.exports = grammar({
       $.class_variable,
       $.global_variable,
       $.constant,
+      $.generic_instance,
       $.parenthesized_expression,
       $.self,
       $.proc_literal,
     ),
+
+    // Generic type used as expression: Array(Int32), Hash(String, Int32)
+    generic_instance: $ => prec(PREC.CALL, seq(
+      $.constant,
+      '(',
+      commaSep1($.type),
+      ')',
+    )),
 
     parenthesized_expression: $ => seq('(', $.expression, ')'),
     self: $ => 'self',
@@ -989,12 +1029,16 @@ module.exports = grammar({
       optional(seq('of', $.type)),
     ),
 
-    hash_literal: $ => seq(
-      '{',
-      commaSep1($.hash_entry),
-      optional(','),
-      '}',
-      optional(seq('of', $.type, '=>', $.type)),
+    hash_literal: $ => choice(
+      seq(
+        '{',
+        commaSep1($.hash_entry),
+        optional(','),
+        '}',
+        optional(seq('of', $.type, '=>', $.type)),
+      ),
+      // Empty hash with type: {} of String => Int32
+      seq('{', '}', 'of', $.type, '=>', $.type),
     ),
 
     hash_entry: $ => seq(
