@@ -190,9 +190,17 @@
   "*="
   "/="
   "%="
+  "&+"
+  "&-"
+  "&*"
+  "&**"
   "=>"
   "->"
 ] @operator
+
+; Macro statements
+(macro_control_statement) @keyword.directive
+(macro_expression_statement) @keyword.directive
 
 ; Punctuation
 ["(" ")" "[" "]" "{" "}"] @punctuation.bracket
