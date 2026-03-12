@@ -110,6 +110,7 @@ module.exports = grammar({
       $.visibility_modifier,
       $.multiple_assignment,
       $.type_declaration,
+      $.macro_statement,
     ),
 
     _terminator: $ => choice('\n', ';'),
@@ -642,6 +643,22 @@ module.exports = grammar({
     macro_control: $ => seq('{%', /([^%]|%[^}])+/, '%}'),
 
     macro_interpolation: $ => seq('\\{', '{', /[^}]+/, '}', '}'),
+
+    // =========================================================================
+    // TOP-LEVEL MACRO STATEMENTS (outside macro_def)
+    // =========================================================================
+    // All {% ... %} and {{ ... }} blocks are opaque tokens.
+    // Crystal code between them parses as regular statements.
+    macro_statement: $ => choice(
+      $.macro_control_statement,
+      $.macro_expression_statement,
+    ),
+
+    // {% ... %} — opaque macro control tag (if/unless/for/begin/end/bare code)
+    macro_control_statement: $ => token(seq('{%', /([^%]|%[^}])+/, '%}')),
+
+    // {{ ... }} — macro expression interpolation
+    macro_expression_statement: $ => token(seq('{{', /([^}]|}[^}])+/, '}}')),
 
     // =========================================================================
     // ANNOTATIONS

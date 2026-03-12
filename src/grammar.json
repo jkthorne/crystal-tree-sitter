@@ -130,6 +130,10 @@
         {
           "type": "SYMBOL",
           "name": "type_declaration"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "macro_statement"
         }
       ]
     },
@@ -3590,6 +3594,59 @@
           "value": "}"
         }
       ]
+    },
+    "macro_statement": {
+      "type": "CHOICE",
+      "members": [
+        {
+          "type": "SYMBOL",
+          "name": "macro_control_statement"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "macro_expression_statement"
+        }
+      ]
+    },
+    "macro_control_statement": {
+      "type": "TOKEN",
+      "content": {
+        "type": "SEQ",
+        "members": [
+          {
+            "type": "STRING",
+            "value": "{%"
+          },
+          {
+            "type": "PATTERN",
+            "value": "([^%]|%[^}])+"
+          },
+          {
+            "type": "STRING",
+            "value": "%}"
+          }
+        ]
+      }
+    },
+    "macro_expression_statement": {
+      "type": "TOKEN",
+      "content": {
+        "type": "SEQ",
+        "members": [
+          {
+            "type": "STRING",
+            "value": "{{"
+          },
+          {
+            "type": "PATTERN",
+            "value": "([^}]|}[^}])+"
+          },
+          {
+            "type": "STRING",
+            "value": "}}"
+          }
+        ]
+      }
     },
     "annotation": {
       "type": "SEQ",

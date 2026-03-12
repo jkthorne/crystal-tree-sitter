@@ -276,6 +276,10 @@
         "named": true
       },
       {
+        "type": "macro_statement",
+        "named": true
+      },
+      {
         "type": "multiple_assignment",
         "named": true
       },
@@ -1793,6 +1797,25 @@
     "type": "macro_interpolation",
     "named": true,
     "fields": {}
+  },
+  {
+    "type": "macro_statement",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": false,
+      "required": true,
+      "types": [
+        {
+          "type": "macro_control_statement",
+          "named": true
+        },
+        {
+          "type": "macro_expression_statement",
+          "named": true
+        }
+      ]
+    }
   },
   {
     "type": "method_def",
@@ -3798,6 +3821,14 @@
   {
     "type": "macro",
     "named": false
+  },
+  {
+    "type": "macro_control_statement",
+    "named": true
+  },
+  {
+    "type": "macro_expression_statement",
+    "named": true
   },
   {
     "type": "macro_plain_text",
