@@ -19,7 +19,7 @@ A [Tree-sitter](https://tree-sitter.github.io/) grammar for the [Crystal](https:
 - **Type system** — annotations, union types, nilable types, pointer types, static arrays, proc types, generic types, `typeof`, `is_a?`, `as`, `responds_to?`, `nil?`
 - **Annotations** — `@[Name]`, `@[Scoped::Name]`
 - **Visibility** — `private`, `protected`
-- **Macros** — basic macro definitions, `{{interpolation}}`, `{% control %}`
+- **Macros** — macro definitions, `{{ }}` interpolation in both statement and expression context (e.g., `{{@type}}::MIN`, `{{x}}.method`), `{% %}` control tags
 - **C bindings** — `lib`, `fun`, `struct`, `union`, `type`, `alias`
 - **Proc literals** — `->{ ... }` syntax
 - **Special** — `spawn`, `typeof`, `sizeof`, `instance_sizeof`, `pointerof`, `offsetof`, `uninitialized`
@@ -56,7 +56,7 @@ npx tree-sitter highlight path/to/file.cr
 
 ## Test Suite
 
-73 tests across 6 corpus files, 100% passing:
+197 tests across 10 corpus files, 100% passing:
 
 | File | Tests | Coverage |
 |------|-------|----------|
@@ -66,12 +66,16 @@ npx tree-sitter highlight path/to/file.cr
 | `control_flow.txt` | 7 | if/unless/case/while, exceptions, return |
 | `methods.txt` | 7 | Definitions, params, visibility, blocks, splat |
 | `strings.txt` | 19 | Interpolation, escapes, heredocs, percent literals, regex, commands |
+| `phase_a.txt` | 39 | Scoped constants, method identifiers, type suffixes, proc types |
+| `phase_b.txt` | 29 | Wrapping operators, macro statements, visibility modifiers |
+| `phase_c.txt` | 45 | Forall, return if, external params, union types, global scope |
+| `phase_d.txt` | 11 | Macro `{{ }}` in expression contexts |
 
 ## Project Structure
 
 ```
 tree-sitter-crystal/
-  grammar.js            # Grammar definition (~1130 rules)
+  grammar.js            # Grammar definition (~1250 rules)
   src/scanner.c         # External scanner for strings/regex/heredocs
   src/grammar.json      # Generated grammar (JSON)
   src/node-types.json   # Generated node types
@@ -90,8 +94,10 @@ Binding support is configured for C, Node, Rust, Go, Python, and Swift via `tree
 ## Known Limitations
 
 - No-paren method calls can be ambiguous with binary expressions (e.g., `a + b` may parse as a call instead of addition)
-- Macro support is basic (no `macro for`, `macro if`, or complex macro bodies)
+- Macro `{% %}` control blocks are opaque tokens (no `macro for`, `macro if` AST structure)
+- Macro `{{ }}` content is opaque (not parsed as Crystal expressions)
 - Named tuples in literals are not yet supported (ambiguous with blocks/hashes without additional scanner work)
+- Identifier concatenation in macros (`value{{i}}`) produces two adjacent nodes rather than a single identifier
 
 ## License
 
