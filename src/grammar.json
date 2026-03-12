@@ -3679,11 +3679,23 @@
             },
             {
               "type": "SYMBOL",
+              "name": "enum_def"
+            },
+            {
+              "type": "SYMBOL",
               "name": "constant"
             },
             {
               "type": "SYMBOL",
               "name": "call"
+            },
+            {
+              "type": "SYMBOL",
+              "name": "assignment"
+            },
+            {
+              "type": "SYMBOL",
+              "name": "type_declaration"
             }
           ]
         }
@@ -6566,6 +6578,14 @@
     [
       "expression",
       "assignment_target"
+    ],
+    [
+      "visibility_modifier",
+      "primary"
+    ],
+    [
+      "visibility_modifier",
+      "expression"
     ]
   ],
   "precedences": [],

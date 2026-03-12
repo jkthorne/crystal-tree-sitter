@@ -3209,6 +3209,10 @@
       "required": true,
       "types": [
         {
+          "type": "assignment",
+          "named": true
+        },
+        {
           "type": "call",
           "named": true
         },
@@ -3221,6 +3225,10 @@
           "named": true
         },
         {
+          "type": "enum_def",
+          "named": true
+        },
+        {
           "type": "method_def",
           "named": true
         },
@@ -3230,6 +3238,10 @@
         },
         {
           "type": "struct_def",
+          "named": true
+        },
+        {
+          "type": "type_declaration",
           "named": true
         }
       ]

@@ -68,6 +68,8 @@ module.exports = grammar({
     [$._method_name, $.named_argument],
     [$.assignment, $.multiple_assignment],
     [$.expression, $.assignment_target],
+    [$.visibility_modifier, $.primary],
+    [$.visibility_modifier, $.expression],
   ],
 
   supertypes: $ => [
@@ -658,7 +660,7 @@ module.exports = grammar({
     // =========================================================================
     visibility_modifier: $ => seq(
       choice('private', 'protected'),
-      choice($.method_def, $.class_def, $.struct_def, $.module_def, $.constant, $.call),
+      choice($.method_def, $.class_def, $.struct_def, $.module_def, $.enum_def, $.constant, $.call, $.assignment, $.type_declaration),
     ),
 
     // =========================================================================
