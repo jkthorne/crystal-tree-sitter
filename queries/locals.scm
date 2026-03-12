@@ -17,11 +17,13 @@
 (class_def) @local.scope
 (struct_def) @local.scope
 (module_def) @local.scope
+(enum_def) @local.scope
 (block) @local.scope
 (if_expression) @local.scope
 (unless_expression) @local.scope
 (while_expression) @local.scope
 (until_expression) @local.scope
+(case_expression) @local.scope
 (begin_expression) @local.scope
 
 ; ---------------------------------------------------------------------------

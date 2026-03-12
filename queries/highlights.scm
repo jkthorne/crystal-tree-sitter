@@ -273,3 +273,19 @@
 
 ; {{ ... }} expression interpolation (in both statement and expression context)
 (macro_expression_statement) @keyword.directive
+
+; ---------------------------------------------------------------------------
+; Type-related expressions
+; ---------------------------------------------------------------------------
+
+; forall clause: def foo forall T, U
+(forall_clause
+  (constant) @type)
+
+; Metaclass type: Foo.class
+(metaclass_type
+  "class" @keyword)
+
+; Instance variable access through receiver: other.@block
+(dot_expression
+  method: (instance_variable) @variable.member)
