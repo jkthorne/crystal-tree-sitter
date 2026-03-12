@@ -1,7 +1,32 @@
 /// <reference types="tree-sitter-cli/dsl" />
 // @ts-check
+//
+// Tree-sitter grammar for the Crystal programming language.
+//
+// This file is the single source of truth for Crystal's syntax rules. It defines
+// the complete grammar used by tree-sitter to generate the parser (src/parser.c).
+//
+// Architecture:
+//   - Grammar rules below define Crystal's syntax declaratively
+//   - An external C scanner (src/scanner.c) handles context-sensitive tokens:
+//     strings, heredocs, regex, percent literals, and command literals
+//   - The external scanner uses a context stack for nested interpolation
+//
+// Conventions:
+//   - Rules prefixed with `_` are hidden (not visible in the AST)
+//   - `token()` creates single terminal nodes (no internal structure)
+//   - `token.immediate()` prevents whitespace before the token
+//   - `prec()` / `prec.left()` / `prec.right()` control parse precedence
+//   - Fields (e.g., `field('name', ...)`) create named child accessors
+//
+// After editing, run:
+//   npm run generate   # regenerate src/parser.c
+//   npm run test       # verify all tests pass
 
-// Operator precedence levels (higher = tighter binding)
+// Operator precedence levels (higher = tighter binding).
+// These values determine how expressions are grouped when multiple operators
+// compete. For example, `a + b * c` groups as `a + (b * c)` because
+// MULTIPLY (13) > ADD (12).
 const PREC = {
   ASSIGN: 1,
   CONDITIONAL: 2,    // ? :
@@ -32,11 +57,14 @@ const CONSTANT = /[A-Z][a-zA-Z0-9_]*/;
 module.exports = grammar({
   name: 'crystal',
 
+  // Characters that can appear anywhere between tokens (whitespace + comments)
   extras: $ => [
     /\s/,
     $.comment,
   ],
 
+  // External tokens produced by the C scanner (src/scanner.c).
+  // Order here MUST match the TokenType enum in scanner.c.
   externals: $ => [
     $._string_start,
     $.string_content,
@@ -57,8 +85,13 @@ module.exports = grammar({
     $._percent_literal_end,
   ],
 
+  // The word token enables tree-sitter's keyword extraction optimization.
+  // Any keyword (if, def, class, etc.) that looks like an identifier will be
+  // matched via this token first, then promoted to the keyword if applicable.
   word: $ => $.identifier,
 
+  // Explicit conflict declarations for ambiguous parse states.
+  // Tree-sitter's GLR parser can handle these by trying both alternatives.
   conflicts: $ => [
     [$.fun_def],
     [$.argument, $.parenthesized_expression],
@@ -72,6 +105,8 @@ module.exports = grammar({
     [$.visibility_modifier, $.expression],
   ],
 
+  // Supertypes create abstract node categories in the AST.
+  // They appear as intermediate wrappers: (expression (primary (identifier)))
   supertypes: $ => [
     $.statement,
     $.expression,
@@ -90,7 +125,9 @@ module.exports = grammar({
       repeat(seq($._terminator, optional($.statement))),
     ),
 
-    // Body block used inside class/module/method/etc definitions
+    // Body block helper used inside class/module/method/etc definitions.
+    // Pattern: newline followed by optional statements. Used as `optional($._body)`
+    // in constructs like `class Foo ... end`.
     _body: $ => seq(
       $._terminator,
       optional($._statements),
@@ -212,6 +249,9 @@ module.exports = grammar({
     // =========================================================================
     // BINARY EXPRESSIONS
     // =========================================================================
+    // Binary operators are defined as a precedence table. Each entry is
+    // [precedence_level, operator_or_choice]. Higher precedence binds tighter.
+    // All are left-associative: `a + b + c` = `(a + b) + c`.
     binary_expression: $ => {
       const table = [
         [PREC.OR, '||'],
@@ -266,6 +306,10 @@ module.exports = grammar({
     // =========================================================================
     // CALLS & MEMBER ACCESS
     // =========================================================================
+    // Crystal supports both parenthesized and no-paren calls: `foo(1)` and `foo 1`.
+    // No-paren calls use `argument_list_no_parens` with prec(-1) so parenthesized
+    // calls are preferred when ambiguous. Global scope calls (`::method`) are also
+    // handled here.
     call: $ => prec.left(PREC.CALL, choice(
       // method(args)
       seq(
@@ -363,6 +407,10 @@ module.exports = grammar({
     // =========================================================================
     // BLOCKS
     // =========================================================================
+    // Crystal blocks come in two forms:
+    //   do |params| ... end   (multi-line convention)
+    //   { |params| ... }      (single-line convention)
+    // Both forms are syntactically equivalent.
     block: $ => choice(
       seq(
         'do',
@@ -392,6 +440,9 @@ module.exports = grammar({
     // =========================================================================
     // CONTROL FLOW
     // =========================================================================
+    // Crystal control flow constructs are expressions (they return values).
+    // Each has a full form (if...end) and a modifier form (expr if cond).
+    // The `then_block` helper handles both `then` keyword and newline separators.
     if_expression: $ => seq(
       'if',
       field('condition', $.expression),
@@ -498,6 +549,10 @@ module.exports = grammar({
     // =========================================================================
     // RETURN, BREAK, NEXT, RAISE, YIELD
     // =========================================================================
+    // These keywords can optionally take a value: `return 42`, `break`, `next value`.
+    // They also support modifier if/unless: `return if done` — this requires
+    // explicit alternatives to prevent `return` from consuming `if_expression`
+    // as its value argument.
     return_statement: $ => prec.left(choice(
       seq('return', optional($.expression)),
       seq('return', 'if', $.expression),
@@ -576,6 +631,14 @@ module.exports = grammar({
     // =========================================================================
     // METHOD DEFINITIONS
     // =========================================================================
+    // Crystal methods support: typed parameters, default values, splat/double-splat,
+    // block parameters, return types, forall (type parameter) clauses, external
+    // parameter names, and operator overloading.
+    //
+    // Examples:
+    //   def foo(x : Int32) : String ... end
+    //   def self.bar(from start : Int, *args, **opts, &block) forall T ... end
+    //   abstract def baz(x : T) : T forall T
     method_def: $ => seq(
       'def',
       choice(
@@ -648,6 +711,14 @@ module.exports = grammar({
     // =========================================================================
     // MACRO DEFINITIONS
     // =========================================================================
+    // Crystal macros are compile-time metaprogramming constructs. Inside macro
+    // bodies, code is treated as opaque text with three special constructs:
+    //   {{ expr }}    — interpolation (inserts expression result)
+    //   {% code %}    — control flow (if/for/etc.)
+    //   \{{ expr }}   — escaped interpolation (literal output)
+    //
+    // Macro body content uses `macro_plain_text` which excludes word characters
+    // so the `end` keyword is not consumed as plain text.
     macro_def: $ => seq(
       'macro',
       field('name', $.identifier),
@@ -676,14 +747,23 @@ module.exports = grammar({
     // =========================================================================
     // TOP-LEVEL MACRO STATEMENTS (outside macro_def)
     // =========================================================================
-    // All {% ... %} and {{ ... }} blocks are opaque tokens.
-    // Crystal code between them parses as regular statements.
+    // Macro constructs that appear at the top level (outside `macro ... end` bodies).
+    // These are used when Crystal stdlib files contain macro interpolation/control
+    // flow that the Crystal compiler processes before normal parsing.
+    //
+    // `{% %}` is statement-only (control flow like {% if %}, {% for %}, {% end %}).
+    // `{{ }}` is in the `primary` rule so it can participate in expressions:
+    //   {{@type}}::MIN, {{x}}.method, foo({{bar}})
     macro_statement: $ => $.macro_control_statement,
 
-    // {% ... %} — opaque macro control tag (if/unless/for/begin/end/bare code)
+    // {% ... %} — opaque macro control tag (if/unless/for/begin/end/bare code).
+    // Content is not parsed; the entire tag is a single terminal token.
     macro_control_statement: $ => token(seq('{%', /([^%]|%[^}])+/, '%}')),
 
-    // {{ ... }} — macro expression interpolation
+    // {{ ... }} — opaque macro expression interpolation.
+    // Added to `primary` (not just `macro_statement`) so it composes with
+    // dot expressions, scoped constants, binary ops, arguments, etc.
+    // Content between {{ and }} is opaque (not parsed as Crystal).
     macro_expression_statement: $ => token(seq('{{', /([^}]|}[^}])+/, '}}')),
 
     // =========================================================================
@@ -712,6 +792,13 @@ module.exports = grammar({
     // =========================================================================
     // LIB / C BINDINGS
     // =========================================================================
+    // Crystal's C interop uses `lib` blocks to declare external functions,
+    // structs, unions, type aliases, and global variables:
+    //   lib LibC
+    //     fun printf(format : Char*, ...) : Int32
+    //     struct Stat ... end
+    //     type PidT = Int32
+    //   end
     lib_def: $ => seq(
       'lib',
       field('name', $.constant),
@@ -793,6 +880,13 @@ module.exports = grammar({
     // =========================================================================
     // TYPES
     // =========================================================================
+    // Crystal's type system includes: simple constants (Int32), generics (Array(T)),
+    // unions (A | B), nilable (T?), pointers (T*), static arrays (StaticArray(T, N)),
+    // proc types (Proc(T, U) or T -> U), tuples ({A, B}), named tuples
+    // (NamedTuple(x: T)), self, typeof, and underscore (inferred).
+    //
+    // Note: StaticArray, Proc, and NamedTuple are also aliased as standalone
+    // constants so they work in union types like `StaticArray | Array`.
     type: $ => choice(
       $.constant,
       $.generic_type,
@@ -964,6 +1058,9 @@ module.exports = grammar({
     // =========================================================================
     // PRIMARY EXPRESSIONS (LITERALS, VARIABLES)
     // =========================================================================
+    // Primary expressions are the atomic building blocks: literals, variables,
+    // constants, parenthesized expressions, proc literals, and macro interpolation.
+    // These compose into larger expressions via operators, calls, and member access.
     primary: $ => choice(
       $.literal,
       $.identifier,
@@ -1016,6 +1113,10 @@ module.exports = grammar({
     // =========================================================================
     // LITERALS
     // =========================================================================
+    // Crystal literals. Note: Crystal has NO single-quoted strings — 'a' is
+    // always a char literal (single character). String literals, heredocs,
+    // regex, commands, and percent literals use the external scanner for
+    // interpolation and escape handling.
     literal: $ => choice(
       $.nil_literal,
       $.bool_literal,
@@ -1159,6 +1260,10 @@ module.exports = grammar({
     // =========================================================================
     // COLLECTION LITERALS
     // =========================================================================
+    // Arrays: [1, 2, 3], [] of Int32
+    // Hashes: {"a" => 1}, {} of String => Int32
+    // Tuples: {1, "a"} (requires 2+ elements to disambiguate from blocks/hash)
+    // Named tuples: not yet supported in literals (ambiguous with blocks/hashes)
     array_literal: $ => seq(
       '[',
       commaSep($.expression),
@@ -1210,6 +1315,8 @@ module.exports = grammar({
     // =========================================================================
     // PROC LITERAL
     // =========================================================================
+    // Lambda/proc syntax: ->(x : Int32) { x + 1 }
+    // The `prec(1)` ensures `->` is parsed as proc start, not the arrow operator.
     proc_literal: $ => prec(1, seq(
       '->',
       optional($.proc_literal_params),
@@ -1249,7 +1356,10 @@ module.exports = grammar({
 // =========================================================================
 // HELPERS
 // =========================================================================
+
 /**
+ * Creates an optional comma-separated list of the given rule.
+ * Matches: (empty), rule, rule "," rule, rule "," rule "," rule, ...
  * @param {RuleOrLiteral} rule
  */
 function commaSep(rule) {
@@ -1257,6 +1367,8 @@ function commaSep(rule) {
 }
 
 /**
+ * Creates a comma-separated list requiring at least one element.
+ * Matches: rule, rule "," rule, rule "," rule "," rule, ...
  * @param {RuleOrLiteral} rule
  */
 function commaSep1(rule) {
