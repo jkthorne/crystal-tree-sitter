@@ -1,3 +1,27 @@
+/**
+ * External scanner for Crystal's context-sensitive tokens.
+ *
+ * Tree-sitter's grammar rules (grammar.js) handle most syntax declaratively,
+ * but certain Crystal constructs require stateful, context-aware lexing that
+ * the generated parser cannot do alone. This scanner handles:
+ *
+ *   - String literals ("...") with #{} interpolation and escape sequences
+ *   - Command literals (`...`) with interpolation
+ *   - Regex literals (/.../) disambiguated from division operator
+ *   - Heredocs (<<-ID ... ID, <<~ID ... ID) with interpolation
+ *   - Percent literals (%w(), %i(), %q(), %Q(), %r(), %x(), %()) with
+ *     balanced delimiter tracking and optional interpolation
+ *
+ * Architecture:
+ *   - A context stack tracks nested lexing states (e.g., string inside
+ *     interpolation inside heredoc)
+ *   - The scanner state is serialized/deserialized for incremental parsing
+ *   - Content scanning stops at boundaries (#{ for interpolation, \ for
+ *     escapes) so the grammar can match those tokens with proper AST nodes
+ *
+ * The TokenType enum order MUST match the `externals` array in grammar.js.
+ */
+
 #include "tree_sitter/alloc.h"
 #include "tree_sitter/array.h"
 #include "tree_sitter/parser.h"
@@ -68,25 +92,29 @@ typedef struct {
 } Scanner;
 
 // =============================================================================
-// Helpers
+// Helpers — context stack management and character classification
 // =============================================================================
 
+/** Returns the top of the context stack, or NULL if empty. */
 static inline Context *current_context(Scanner *scanner) {
   if (scanner->stack.size == 0) return NULL;
   return array_back(&scanner->stack);
 }
 
+/** Pushes a new context onto the stack (e.g., entering a string or interpolation). */
 static inline void push_context(Scanner *scanner, enum ContextType type) {
   Context ctx = {.type = type, .open_delimiter = 0, .close_delimiter = 0, .nesting_depth = 0};
   array_push(&scanner->stack, ctx);
 }
 
+/** Pops the top context (e.g., exiting a string or interpolation). */
 static inline void pop_context(Scanner *scanner) {
   if (scanner->stack.size > 0) {
     array_pop(&scanner->stack);
   }
 }
 
+/** Returns the closing delimiter for a given opening delimiter (e.g., '(' -> ')'). */
 static int32_t matching_delimiter(int32_t open) {
   switch (open) {
     case '(': return ')';
@@ -107,10 +135,16 @@ static bool is_identifier_start(int32_t c) {
   return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c == '_';
 }
 
-// Can a regex appear here? Based on what preceded.
-// After these tokens, `/` is division: identifier, constant, number, `)`, `]`, `}`
-// Otherwise `/` starts a regex.
-// We approximate by checking if the preceding non-whitespace was an operator/keyword/etc.
+/**
+ * Heuristic for regex vs division disambiguation.
+ *
+ * After expression-ending tokens (identifiers, numbers, `)`, `]`, `}`), `/` is
+ * division. After operators, keywords, and line starts, `/` begins a regex.
+ * This function returns true if `/` should be treated as regex start.
+ *
+ * Note: currently unused — the grammar's valid_symbols mechanism handles this
+ * disambiguation, but kept for reference.
+ */
 static bool can_be_regex_after(int32_t prev) {
   // After these, `/` is regex
   switch (prev) {
@@ -125,7 +159,7 @@ static bool can_be_regex_after(int32_t prev) {
   }
 }
 
-// Check if a context supports interpolation
+/** Returns true if the given context type supports #{} string interpolation. */
 static bool context_supports_interpolation(enum ContextType type) {
   switch (type) {
     case CTX_STRING:
@@ -141,9 +175,10 @@ static bool context_supports_interpolation(enum ContextType type) {
 }
 
 // =============================================================================
-// Lifecycle functions
+// Lifecycle functions — required by tree-sitter's external scanner API
 // =============================================================================
 
+/** Allocates and initializes scanner state. Called once when the parser is created. */
 void *tree_sitter_crystal_external_scanner_create() {
   Scanner *scanner = ts_calloc(1, sizeof(Scanner));
   array_init(&scanner->stack);
@@ -152,12 +187,19 @@ void *tree_sitter_crystal_external_scanner_create() {
   return scanner;
 }
 
+/** Frees scanner state. Called when the parser is destroyed. */
 void tree_sitter_crystal_external_scanner_destroy(void *payload) {
   Scanner *scanner = payload;
   array_delete(&scanner->stack);
   ts_free(scanner);
 }
 
+/**
+ * Serializes scanner state to a byte buffer for incremental parsing.
+ *
+ * Layout: [stack_size] [ctx entries...] [heredoc_id_len] [heredoc_indent] [heredoc_id...]
+ * Each context entry is 4 bytes: [type, open_delim, close_delim, nesting_depth].
+ */
 unsigned tree_sitter_crystal_external_scanner_serialize(void *payload, char *buffer) {
   Scanner *scanner = payload;
   unsigned size = 0;
@@ -187,6 +229,7 @@ unsigned tree_sitter_crystal_external_scanner_serialize(void *payload, char *buf
   return size;
 }
 
+/** Restores scanner state from a serialized byte buffer. Inverse of serialize. */
 void tree_sitter_crystal_external_scanner_deserialize(void *payload, const char *buffer, unsigned length) {
   Scanner *scanner = payload;
   array_clear(&scanner->stack);
@@ -224,18 +267,24 @@ void tree_sitter_crystal_external_scanner_deserialize(void *payload, const char 
 }
 
 // =============================================================================
-// Scan function
+// Scan function — the main entry point called by tree-sitter's parser
 // =============================================================================
 
+/** Advances the lexer by one character (consumed into the token). */
 static void advance(TSLexer *lexer) {
   lexer->advance(lexer, false);
 }
 
+/** Advances the lexer by one character (skipped, not included in the token). */
 static void skip(TSLexer *lexer) {
   lexer->advance(lexer, true);
 }
 
-// Scan string content: everything until `"`, `#{`, or `\`
+/**
+ * Scans string content between delimiters.
+ * Stops at: `"` (end), `#{` (interpolation start), `\` (escape sequence).
+ * Returns true if any content was consumed.
+ */
 static bool scan_string_content(TSLexer *lexer) {
   bool has_content = false;
 
@@ -279,7 +328,10 @@ static bool scan_string_content(TSLexer *lexer) {
   }
 }
 
-// Scan command content: everything until `, #{, or backslash
+/**
+ * Scans command literal content (backtick strings).
+ * Stops at: `` ` `` (end), `#{` (interpolation start), `\` (escape sequence).
+ */
 static bool scan_command_content(TSLexer *lexer) {
   bool has_content = false;
 
@@ -313,7 +365,10 @@ static bool scan_command_content(TSLexer *lexer) {
   }
 }
 
-// Scan regex content: everything until /, #{, or backslash
+/**
+ * Scans regex literal content.
+ * Stops at: `/` (end), `#{` (interpolation start), `\` (escape sequence).
+ */
 static bool scan_regex_content(TSLexer *lexer) {
   bool has_content = false;
 
@@ -347,7 +402,11 @@ static bool scan_regex_content(TSLexer *lexer) {
   }
 }
 
-// Scan percent literal content
+/**
+ * Scans percent literal content (%w(), %q(), etc.).
+ * Handles balanced delimiter nesting (e.g., %w(a (b) c) tracks paren depth).
+ * Stops at: closing delimiter (at depth 0), `#{` (if interpolation-capable), `\`.
+ */
 static bool scan_percent_content(Scanner *scanner, TSLexer *lexer) {
   Context *ctx = current_context(scanner);
   if (!ctx) return false;
@@ -401,7 +460,12 @@ static bool scan_percent_content(Scanner *scanner, TSLexer *lexer) {
   }
 }
 
-// Scan heredoc content
+/**
+ * Scans heredoc content.
+ * Stops at: `#{` (interpolation), `\` (escape), or when the heredoc terminator
+ * identifier appears on its own line (with optional leading whitespace).
+ * The terminator itself is NOT consumed — it's matched by HEREDOC_END.
+ */
 static bool scan_heredoc_content(Scanner *scanner, TSLexer *lexer) {
   bool has_content = false;
 
@@ -463,6 +527,18 @@ static bool scan_heredoc_content(Scanner *scanner, TSLexer *lexer) {
   }
 }
 
+/**
+ * Main scan entry point — called by tree-sitter when an external token might match.
+ *
+ * The `valid_symbols` array indicates which external tokens the parser expects
+ * at the current position. The scanner checks the current context stack and
+ * lookahead character to decide what to emit.
+ *
+ * Dispatch order:
+ *   1. Interpolation end (}) — if inside #{...} interpolation
+ *   2. Context-specific scanning — string/command/regex/heredoc/percent content
+ *   3. Top-level token starts — opening delimiters for new strings/regex/etc.
+ */
 bool tree_sitter_crystal_external_scanner_scan(
   void *payload,
   TSLexer *lexer,
