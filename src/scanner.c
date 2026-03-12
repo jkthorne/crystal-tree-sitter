@@ -545,6 +545,16 @@ bool tree_sitter_crystal_external_scanner_scan(
   const bool *valid_symbols
 ) {
   Scanner *scanner = payload;
+
+  // Guard: in error recovery mode, all valid_symbols are set to true.
+  // Return false to let the grammar's internal lexer handle tokenization,
+  // preventing the scanner from creating spurious contexts.
+  bool all_valid = true;
+  for (int i = 0; i <= PERCENT_LITERAL_END; i++) {
+    if (!valid_symbols[i]) { all_valid = false; break; }
+  }
+  if (all_valid) return false;
+
   Context *ctx = current_context(scanner);
 
 #ifdef TREE_SITTER_DEBUG
