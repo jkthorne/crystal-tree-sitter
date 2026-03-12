@@ -1,28 +1,31 @@
 # Crystal Tree-Sitter Grammar: Plan
 
-## Current State (Post Phase E partial) — 222 tests passing
+## Current State (Phase E complete) — 227 tests passing
 
-| File | Errors | Rate | Notes |
-|------|--------|------|-------|
-| array.cr (2269 lines) | 30 | 1.3% | splat in index, `!` at EOL |
-| hash.cr (2300) | 41 | 1.7% | down from 76 (proc types, ivar access) |
-| enumerable.cr (2350) | 49 | 2.0% | `.method` in when, `!` at EOL |
-| json/builder.cr (452) | 12 | 2.6% | no-paren calls |
-| string.cr (5896) | 200 | 3.3% | cascading from `{% %}` |
-| int.cr (2864) | 195 | 6.8% | cascading from `{% %}` |
+| File | Errors | Rate | Threshold | Notes |
+|------|--------|------|-----------|-------|
+| array.cr (2269 lines) | 27 | 1.1% | 1.5% | `!` at EOL remains |
+| hash.cr (2300) | 37 | 1.6% | 2.0% | down from 76 |
+| enumerable.cr (2350) | 41 | 1.7% | 2.0% | down from 49 |
+| json/builder.cr (452) | 11 | 2.4% | 2.5% | no-paren calls |
+| string.cr (5896) | 197 | 3.3% | 3.5% | macro-heavy, was 200 |
+| int.cr (2864) | 198 | 6.9% | 7.0% | macro-heavy, was 195 |
 
-Most remaining errors in string.cr/int.cr cascade from unparsed `{% for %}` / `{% if %}` macro control blocks.
+### Phase E Improvements
 
-### Phase E Improvements Made
-
-- **Parenthesized proc types:** `(K -> V)?`, `(self, K -> V)?` — fixed hash.cr cascade
-- **Instance variable access through receiver:** `other.@block` — fixed hash.cr errors
-- **Multi-value return/break/next/yield:** `return entry, index` — fixed hash.cr, array.cr
-- **forall clause:** Extracted as named rule with proper precedence
-- **Splat in block params:** `|*kv|` — fixed enumerable.cr errors
-- **Metaclass type:** `Foo.class` in type positions
-- **Query updates:** forall_clause, metaclass_type, dot ivar access highlights; enum/case scopes
-- **CI script:** `scripts/check-error-rates.sh` with per-file thresholds
+- **Scanner all-valid guard:** Returns `false` during error recovery (all `valid_symbols` true), preventing cascading failures from spurious scanner contexts. Single highest-impact change.
+- **Macro control as extras:** `{% %}` moved to `extras` array so it's handled like comments — can appear anywhere between tokens without parse errors.
+- **Splat in index expression:** `self[*foo(x)]`, `arr[*a, *b]` — fixed array.cr errors.
+- **Implicit object operators in when:** `when .is_a?(Type)`, `when .>(5)` — fixed enumerable.cr errors.
+- **Parenthesized proc types:** `(K -> V)?`, `(self, K -> V)?` — fixed hash.cr cascade.
+- **Instance variable access through receiver:** `other.@block` — fixed hash.cr errors.
+- **Multi-value return/break/next/yield:** `return entry, index` — fixed hash.cr, array.cr.
+- **forall clause:** Extracted as named rule with proper precedence.
+- **Splat in block params:** `|*kv|` — fixed enumerable.cr errors.
+- **Metaclass type:** `Foo.class` in type positions.
+- **Query updates:** forall_clause, metaclass_type, dot ivar access highlights; enum/case scopes.
+- **CI script:** `scripts/check-error-rates.sh` with tightened per-file thresholds.
+- **Fuzz test script:** `scripts/fuzz-test.sh` for broad stdlib parsing validation.
 
 ## Open Gaps
 
@@ -34,7 +37,6 @@ Most remaining errors in string.cr/int.cr cascade from unparsed `{% for %}` / `{
 | Symbol in no-paren calls | `puts :flush` | `:` lexed as type annotation |
 | `x.not_nil!` at EOL | `!` suffix on dot call | `!` tokenized as operator at EOL |
 | String line continuation | `"hello " \<newline>"world"` | Scanner change |
-| Implicit object in when | `when .>(5)` | `.method` parsed as ERROR |
 
 ### Grammar Only
 
@@ -42,36 +44,33 @@ Most remaining errors in string.cr/int.cr cascade from unparsed `{% for %}` / `{
 |-----|-------|
 | Error recovery | Parser cascades instead of recovering; `prec.dynamic` + error tokens at statement boundaries |
 | No-paren call precedence | Greedy parsing eats binary expressions; hardest grammar problem |
-| Splat in index expression | `self[*foo(x)]` — blocked by no-paren call precedence |
-
-## Phase E: Production Polish (remaining)
-
-1. Error recovery — strategic error tokens at statement boundaries
-2. No-paren call precedence — may need external scanner context
-3. Test corpus expansion — target 300+ tests (currently 222)
-4. Fuzz testing
 
 ## Phase F: Advanced Features
 
-1. Full macro body parsing — parse Crystal inside `{{ }}`
-2. C binding improvements — callback types, variadic functions
-3. Concurrency — `select`/`when` for channels
-4. Editor integration testing — Neovim, Helix, Zed, VS Code
+1. Error recovery — strategic error tokens at statement boundaries
+2. No-paren call precedence — may need external scanner context
+3. Full macro body parsing — parse Crystal inside `{{ }}`
+4. C binding improvements — callback types, variadic functions
+5. Concurrency — `select`/`when` for channels
+6. Editor integration testing — Neovim, Helix, Zed, VS Code
 
 ## Targets
 
 | Milestone | Non-macro error rate | Macro error rate | Tests |
 |-----------|---------------------|-----------------|-------|
 | Phase D | ~1.3% | ~2.5-6.8% | 197 |
-| Current (Phase E partial) | ~1.3-2.0% | ~3.3-6.8% | 222 |
-| Phase E complete | <0.5% | <2% | 300+ |
-| Phase F | <0.1% | <0.5% | 500+ |
+| Phase E partial | ~1.3-2.0% | ~3.3-6.8% | 222 |
+| **Phase E complete** | **~1.1-2.4%** | **~3.3-6.9%** | **227** |
+| Phase F | <0.5% | <2% | 300+ |
 
 ## Testing
 
 ```sh
 # Automated error-rate check with thresholds
 ./scripts/check-error-rates.sh --download
+
+# Fuzz test against full stdlib
+./scripts/fuzz-test.sh --download --threshold 5.0
 
 # Manual: download and parse
 for f in string int array json/builder enumerable hash; do
@@ -86,7 +85,8 @@ done
 
 ## Design Decisions
 
-- **Opaque macro tokens:** `{% %}` and `{{ }}` are opaque single tokens from the external scanner. `{{ }}` participates in expressions (added to `primary` rule in Phase D). `{% %}` control flow is not in the AST — this is the main source of cascading errors.
+- **Opaque macro tokens:** `{% %}` and `{{ }}` are opaque single tokens. `{{ }}` participates in expressions (added to `primary` rule in Phase D). `{% %}` is now in `extras` so it can appear anywhere between tokens without causing parse errors.
+- **Scanner error recovery guard:** The external scanner returns `false` when all `valid_symbols` are true (error recovery mode), preventing spurious context creation that caused cascading failures.
 - **Named tuples deferred:** `{name: "foo"}` conflicts with block/hash/tuple syntax without external scanner disambiguation.
 - **Symbol in no-paren calls deferred:** `puts :symbol` fails because `:` is lexed as type annotation separator.
 - **Parenthesized proc types:** `(Type, Type -> Type)` form added in Phase E with GLR conflict resolution for comma-separated type contexts.
