@@ -21,9 +21,12 @@ const PREC = {
   CALL: 16,          // method calls
   INDEX: 17,         // []
   DOT: 18,           // .
+  SCOPE: 19,         // ::
 };
 
 const IDENTIFIER = /[a-z_][a-zA-Z0-9_]*/;
+const METHOD_IDENTIFIER = /[a-z_][a-zA-Z0-9_]*[?!]/;
+const SETTER_IDENTIFIER = /[a-z_][a-zA-Z0-9_]*=/;
 const CONSTANT = /[A-Z][a-zA-Z0-9_]*/;
 
 module.exports = grammar({
@@ -60,6 +63,11 @@ module.exports = grammar({
     [$.fun_def],
     [$.argument, $.parenthesized_expression],
     [$.assignment_target, $.primary],
+    [$.primary, $._method_name],
+    [$._method_name, $.named_argument, $.primary],
+    [$._method_name, $.named_argument],
+    [$.assignment, $.multiple_assignment],
+    [$.expression, $.assignment_target],
   ],
 
   supertypes: $ => [
@@ -186,6 +194,8 @@ module.exports = grammar({
       $.class_variable,
       $.global_variable,
       $.constant,
+      $.index_expression,
+      $.dot_expression,
     ),
 
     multiple_assignment: $ => prec.right(PREC.ASSIGN, seq(
@@ -256,19 +266,19 @@ module.exports = grammar({
     call: $ => prec.left(PREC.CALL, choice(
       // method(args)
       seq(
-        field('method', $.identifier),
+        field('method', $._method_name),
         field('arguments', $.argument_list),
         optional($.block),
       ),
       // method args (no parens)
       seq(
-        field('method', $.identifier),
+        field('method', $._method_name),
         field('arguments', $.argument_list_no_parens),
         optional($.block),
       ),
       // method { block }
       seq(
-        field('method', $.identifier),
+        field('method', $._method_name),
         $.block,
       ),
     )),
@@ -276,7 +286,7 @@ module.exports = grammar({
     dot_expression: $ => prec.left(PREC.DOT, seq(
       field('receiver', $.expression),
       choice('.', '&.'),
-      field('method', choice($.identifier, $.constant)),
+      field('method', choice($._method_name, $.constant)),
       optional(field('arguments', $.argument_list)),
       optional($.block),
     )),
@@ -306,6 +316,7 @@ module.exports = grammar({
       $.splat_argument,
       $.double_splat_argument,
       $.block_argument,
+      $.out_argument,
     ),
 
     named_argument: $ => seq(
@@ -323,10 +334,12 @@ module.exports = grammar({
       $.short_block,
     ),
 
+    out_argument: $ => seq('out', $.identifier),
+
     // Short block syntax: &.method or &.method(args)
     short_block: $ => seq(
       '&.',
-      field('method', $.identifier),
+      field('method', $._method_name),
       optional(field('arguments', $.argument_list)),
     ),
 
@@ -412,7 +425,7 @@ module.exports = grammar({
 
     when_value: $ => choice(
       $.expression,
-      seq('.', $.identifier),  // implicit enum member
+      seq('.', $._method_name),  // implicit enum member or method
     ),
 
     while_expression: $ => seq(
@@ -476,9 +489,10 @@ module.exports = grammar({
 
     raise_statement: $ => prec.left(seq('raise', $.expression)),
 
-    yield_expression: $ => prec.left(seq('yield', optional(
+    yield_expression: $ => prec.left(seq('yield', optional(choice(
       $.argument_list,
-    ))),
+      $.expression,
+    )))),
 
     // =========================================================================
     // TYPE DEFINITIONS
@@ -510,7 +524,7 @@ module.exports = grammar({
 
     enum_def: $ => seq(
       'enum',
-      field('name', $.constant),
+      field('name', $._type_identifier),
       optional(seq(':', field('base_type', $.type))),
       $._terminator,
       repeat(choice($.enum_member, $.method_def, $._terminator)),
@@ -535,8 +549,8 @@ module.exports = grammar({
     method_def: $ => seq(
       'def',
       choice(
-        field('name', choice($.identifier, $.operator_method_def)),
-        seq('self', '.', field('name', choice($.identifier, $.operator_method_def))),
+        field('name', $._def_name),
+        seq('self', '.', field('name', $._def_name)),
       ),
       optional($.method_params),
       optional(seq(':', field('return_type', $.type))),
@@ -545,12 +559,18 @@ module.exports = grammar({
       'end',
     ),
 
+    _def_name: $ => choice(
+      $._method_name,
+      $.setter_method_name,
+      $.operator_method_def,
+    ),
+
     abstract_def: $ => prec.left(seq(
       'abstract',
       'def',
       choice(
-        field('name', choice($.identifier, $.operator_method_def)),
-        seq('self', '.', field('name', choice($.identifier, $.operator_method_def))),
+        field('name', $._def_name),
+        seq('self', '.', field('name', $._def_name)),
       ),
       optional($.method_params),
       optional(seq(':', field('return_type', $.type))),
@@ -587,9 +607,9 @@ module.exports = grammar({
 
     double_splat_param: $ => seq('**', $.identifier, optional(seq(':', $.type))),
 
-    block_param_def: $ => seq('&', optional(seq(
-      $.identifier,
-      optional(seq(':', $.type)),
+    block_param_def: $ => seq('&', optional(choice(
+      seq($.identifier, optional(seq(':', $.type))),
+      seq(':', $.type),  // anonymous block with type: & : IO ->
     ))),
 
     // =========================================================================
@@ -654,9 +674,16 @@ module.exports = grammar({
         $.type_def,
         $.enum_def,
         $.alias_statement,
+        $.lib_var_decl,
         $._terminator,
       )),
       'end',
+    ),
+
+    lib_var_decl: $ => seq(
+      $.global_variable,
+      ':',
+      $.type,
     ),
 
     fun_def: $ => choice(
@@ -733,13 +760,28 @@ module.exports = grammar({
       $.scoped_type,
     ),
 
+    // Type name used in class/module/struct definitions — allows Foo, Foo(T), Foo::Bar, Foo::Bar(T)
     type_name: $ => prec(1, choice(
-      $.generic_type_def,
       $.constant,
+      $.generic_type_def,
+      $.scoped_type_name,
     )),
 
-    generic_type: $ => prec(1, seq(
+    // Scoped type name for definitions: Foo::Bar, Foo::Bar::Baz, Foo::Bar(T)
+    scoped_type_name: $ => prec.left(1, seq(
+      $._type_identifier,
+      '::',
+      choice($.constant, $.generic_type_def),
+    )),
+
+    // Helper: constant or scoped constant in type name position
+    _type_identifier: $ => choice(
       $.constant,
+      $.scoped_type_name,
+    ),
+
+    generic_type: $ => prec(1, seq(
+      choice($.constant, $.scoped_constant),
       '(',
       commaSep1($.type),
       ')',
@@ -767,11 +809,19 @@ module.exports = grammar({
       ')',
     ),
 
-    proc_type: $ => prec.right(seq(
-      'Proc',
-      '(',
-      commaSep($.type),
-      ')',
+    proc_type: $ => prec.right(choice(
+      // Canonical form: Proc(Int32, String)
+      seq(
+        'Proc',
+        '(',
+        commaSep($.type),
+        ')',
+      ),
+      // Arrow form: Int32 -> String, -> Nil
+      // Single arg doesn't need parens, multi-arg uses parens
+      seq($.type, '->', optional($.type)),
+      // No-arg arrow form: -> Nil, ->
+      seq('->', optional($.type)),
     )),
 
     tuple_type: $ => seq('{', commaSep1($.type), '}'),
@@ -786,12 +836,12 @@ module.exports = grammar({
     self_type: $ => 'self',
     typeof_type: $ => seq('typeof', '(', commaSep1($.expression), ')'),
     underscore_type: $ => '_',
-    scoped_type: $ => prec(3, seq($.constant, '::', $.type)),
+    scoped_type: $ => prec(3, seq(choice($.constant, $.scoped_constant), '::', $.type)),
 
     // =========================================================================
     // ALIAS
     // =========================================================================
-    alias_statement: $ => seq('alias', $.constant, '=', $.type),
+    alias_statement: $ => seq('alias', $._type_identifier, '=', $.type),
 
     // Type declaration: x : Int32, x : Int32 = 42
     type_declaration: $ => prec.right(PREC.ASSIGN, seq(
@@ -864,19 +914,28 @@ module.exports = grammar({
     primary: $ => choice(
       $.literal,
       $.identifier,
+      $.method_identifier,
       $.instance_variable,
       $.class_variable,
       $.global_variable,
       $.constant,
+      $.scoped_constant,
       $.generic_instance,
       $.parenthesized_expression,
       $.self,
       $.proc_literal,
     ),
 
-    // Generic type used as expression: Array(Int32), Hash(String, Int32)
-    generic_instance: $ => prec(PREC.CALL, seq(
+    // Scoped constant access: Foo::Bar, Foo::Bar::Baz
+    scoped_constant: $ => prec.left(PREC.SCOPE, seq(
+      choice($.constant, $.scoped_constant),
+      '::',
       $.constant,
+    )),
+
+    // Generic type used as expression: Array(Int32), Hash(String, Int32), Foo::Bar(Int32)
+    generic_instance: $ => prec(PREC.CALL, seq(
+      choice($.constant, $.scoped_constant),
       '(',
       commaSep1($.type),
       ')',
@@ -884,6 +943,18 @@ module.exports = grammar({
 
     parenthesized_expression: $ => seq('(', $.expression, ')'),
     self: $ => 'self',
+
+    // =========================================================================
+    // METHOD NAMES
+    // =========================================================================
+    // Method name: identifier or identifier with ? or ! suffix
+    _method_name: $ => choice($.identifier, $.method_identifier),
+
+    // Methods with ? or ! suffix: empty?, valid?, save!
+    method_identifier: $ => METHOD_IDENTIFIER,
+
+    // Setter method name: foo= (only valid in def)
+    setter_method_name: $ => SETTER_IDENTIFIER,
 
     // =========================================================================
     // LITERALS
@@ -910,14 +981,14 @@ module.exports = grammar({
     bool_literal: $ => choice('true', 'false'),
 
     integer_literal: $ => token(choice(
-      // Decimal
-      seq(optional('-'), /[0-9][0-9_]*/),
+      // Decimal with optional type suffix (i8, i16, i32, i64, i128, u8, u16, u32, u64, u128)
+      seq(optional('-'), /[0-9][0-9_]*/, optional(/[iu](8|16|32|64|128)/)),
       // Hex
-      seq(optional('-'), /0x[0-9a-fA-F][0-9a-fA-F_]*/),
+      seq(optional('-'), /0x[0-9a-fA-F][0-9a-fA-F_]*/, optional(/[iu](8|16|32|64|128)/)),
       // Octal
-      seq(optional('-'), /0o[0-7][0-7_]*/),
+      seq(optional('-'), /0o[0-7][0-7_]*/, optional(/[iu](8|16|32|64|128)/)),
       // Binary
-      seq(optional('-'), /0b[01][01_]*/),
+      seq(optional('-'), /0b[01][01_]*/, optional(/[iu](8|16|32|64|128)/)),
     )),
 
     float_literal: $ => token(seq(
@@ -1022,6 +1093,8 @@ module.exports = grammar({
 
     symbol_literal: $ => choice(
       seq(':', token.immediate(IDENTIFIER)),
+      seq(':', token.immediate(METHOD_IDENTIFIER)),
+      seq(':', token.immediate(SETTER_IDENTIFIER)),
       seq(':', token.immediate(CONSTANT)),
       seq(':"', /[^"]+/, '"'),
     ),
