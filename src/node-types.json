@@ -1426,6 +1426,10 @@
           "named": true
         },
         {
+          "type": "macro_expression_statement",
+          "named": true
+        },
+        {
           "type": "scoped_constant",
           "named": true
         },

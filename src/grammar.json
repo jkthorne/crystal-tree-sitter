@@ -5585,6 +5585,10 @@
               {
                 "type": "SYMBOL",
                 "name": "scoped_constant"
+              },
+              {
+                "type": "SYMBOL",
+                "name": "macro_expression_statement"
               }
             ]
           },

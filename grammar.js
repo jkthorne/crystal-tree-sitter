@@ -990,9 +990,9 @@ module.exports = grammar({
       seq('::', $.constant),  // global scope prefix
     )),
 
-    // Generic type used as expression: Array(Int32), Hash(String, Int32), Foo::Bar(Int32)
+    // Generic type used as expression: Array(Int32), Hash(String, Int32), Foo::Bar(Int32), {{type}}(Int32)
     generic_instance: $ => prec(PREC.CALL, seq(
-      choice($.constant, $.scoped_constant),
+      choice($.constant, $.scoped_constant, $.macro_expression_statement),
       '(',
       commaSep1($.type),
       ')',
