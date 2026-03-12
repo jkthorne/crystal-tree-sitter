@@ -1,0 +1,78 @@
+================================================================================
+Operator method definition +
+================================================================================
+
+def +(other)
+  42
+end
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (method_def
+    name: (operator_method_def)
+    (method_params
+      (param
+        name: (identifier)))
+    (primary
+      (integer_literal))))
+
+================================================================================
+Operator method definition []
+================================================================================
+
+def [](index)
+  42
+end
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (method_def
+    name: (operator_method_def)
+    (method_params
+      (param
+        name: (identifier)))
+    (primary
+      (integer_literal))))
+
+================================================================================
+Double splat parameter
+================================================================================
+
+def foo(**kwargs)
+end
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (method_def
+    name: (identifier)
+    (method_params
+      (param
+        (double_splat_param
+          (identifier))))))
+
+================================================================================
+Bare splat separator
+================================================================================
+
+def foo(x : Int32, *, named : String)
+end
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (method_def
+    name: (identifier)
+    (method_params
+      (param
+        name: (identifier)
+        type: (type
+          (constant)))
+      (param
+        (splat_param))
+      (param
+        name: (identifier)
+        type: (type
+          (constant))))))
