@@ -168,12 +168,10 @@ end
   (class_def
     name: (type_name
       (constant))
-    (macro_statement
-      (macro_control_statement))
+    (macro_control_statement)
     (method_def
       name: (identifier))
-    (macro_statement
-      (macro_control_statement))))
+    (macro_control_statement)))
 
 ================================================================================
 Macro control statement at top level
@@ -187,10 +185,8 @@ end
 --------------------------------------------------------------------------------
 
 (source_file
-  (macro_statement
-    (macro_control_statement))
+  (macro_control_statement)
   (class_def
     name: (type_name
       (constant)))
-  (macro_statement
-    (macro_control_statement)))
+  (macro_control_statement))

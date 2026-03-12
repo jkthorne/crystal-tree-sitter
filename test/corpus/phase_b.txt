@@ -131,11 +131,11 @@ x = 1
 ---
 
 (source_file
-  (macro_statement (macro_control_statement))
+  (macro_control_statement)
   (assignment
     (assignment_target (identifier))
     (primary (integer_literal)))
-  (macro_statement (macro_control_statement)))
+  (macro_control_statement))
 
 ==================
 Macro expression statement
@@ -159,11 +159,11 @@ x = 1
 ---
 
 (source_file
-  (macro_statement (macro_control_statement))
+  (macro_control_statement)
   (assignment
     (assignment_target (identifier))
     (primary (integer_literal)))
-  (macro_statement (macro_control_statement)))
+  (macro_control_statement))
 
 ==================
 Macro inside class definition

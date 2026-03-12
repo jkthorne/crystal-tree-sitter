@@ -130,10 +130,6 @@
         {
           "type": "SYMBOL",
           "name": "type_declaration"
-        },
-        {
-          "type": "SYMBOL",
-          "name": "macro_statement"
         }
       ]
     },
@@ -3923,10 +3919,6 @@
         }
       ]
     },
-    "macro_statement": {
-      "type": "SYMBOL",
-      "name": "macro_control_statement"
-    },
     "macro_control_statement": {
       "type": "TOKEN",
       "content": {
@@ -7069,6 +7061,10 @@
     {
       "type": "SYMBOL",
       "name": "comment"
+    },
+    {
+      "type": "SYMBOL",
+      "name": "macro_control_statement"
     }
   ],
   "conflicts": [

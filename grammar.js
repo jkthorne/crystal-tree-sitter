@@ -61,6 +61,7 @@ module.exports = grammar({
   extras: $ => [
     /\s/,
     $.comment,
+    $.macro_control_statement,
   ],
 
   // External tokens produced by the C scanner (src/scanner.c).
@@ -153,7 +154,6 @@ module.exports = grammar({
       $.visibility_modifier,
       $.multiple_assignment,
       $.type_declaration,
-      $.macro_statement,
     ),
 
     _terminator: $ => choice('\n', ';'),
@@ -766,8 +766,6 @@ module.exports = grammar({
     // `{% %}` is statement-only (control flow like {% if %}, {% for %}, {% end %}).
     // `{{ }}` is in the `primary` rule so it can participate in expressions:
     //   {{@type}}::MIN, {{x}}.method, foo({{bar}})
-    macro_statement: $ => $.macro_control_statement,
-
     // {% ... %} — opaque macro control tag (if/unless/for/begin/end/bare code).
     // Content is not parsed; the entire tag is a single terminal token.
     macro_control_statement: $ => token(seq('{%', /([^%]|%[^}])+/, '%}')),
