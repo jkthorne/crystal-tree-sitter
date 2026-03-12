@@ -100,3 +100,28 @@ end
     name: (identifier)
     (primary
       (integer_literal))))
+
+================================================================================
+Instance variable access through receiver
+================================================================================
+
+@block = other.@block
+return if other.@entries.null?
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (assignment
+    (assignment_target
+      (instance_variable))
+    (dot_expression
+      receiver: (primary
+        (identifier))
+      method: (instance_variable)))
+  (return_statement
+    (dot_expression
+      receiver: (dot_expression
+        receiver: (primary
+          (identifier))
+        method: (instance_variable))
+      method: (method_identifier))))

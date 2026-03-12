@@ -348,7 +348,7 @@ module.exports = grammar({
     dot_expression: $ => prec.left(PREC.DOT, seq(
       field('receiver', $.expression),
       choice('.', '&.'),
-      field('method', choice($._method_name, $.constant)),
+      field('method', choice($._method_name, $.constant, $.instance_variable)),
       optional(field('arguments', $.argument_list)),
       optional($.block),
     )),
