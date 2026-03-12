@@ -351,9 +351,13 @@
       }
     },
     "children": {
-      "multiple": false,
+      "multiple": true,
       "required": false,
       "types": [
+        {
+          "type": "constant",
+          "named": true
+        },
         {
           "type": "method_params",
           "named": true
@@ -1809,10 +1813,6 @@
         {
           "type": "macro_control_statement",
           "named": true
-        },
-        {
-          "type": "macro_expression_statement",
-          "named": true
         }
       ]
     }
@@ -2189,6 +2189,16 @@
           }
         ]
       },
+      "external_name": {
+        "multiple": false,
+        "required": false,
+        "types": [
+          {
+            "type": "identifier",
+            "named": true
+          }
+        ]
+      },
       "name": {
         "multiple": false,
         "required": false,
@@ -2339,6 +2349,10 @@
         },
         {
           "type": "literal",
+          "named": true
+        },
+        {
+          "type": "macro_expression_statement",
           "named": true
         },
         {

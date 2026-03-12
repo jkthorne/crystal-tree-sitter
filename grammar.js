@@ -284,6 +284,20 @@ module.exports = grammar({
         field('method', $._method_name),
         $.block,
       ),
+      // ::method(args) — global scope call
+      seq(
+        '::',
+        field('method', $._method_name),
+        field('arguments', $.argument_list),
+        optional($.block),
+      ),
+      // ::method args — global scope call without parens
+      seq(
+        '::',
+        field('method', $._method_name),
+        field('arguments', $.argument_list_no_parens),
+        optional($.block),
+      ),
     )),
 
     dot_expression: $ => prec.left(PREC.DOT, seq(
@@ -484,16 +498,29 @@ module.exports = grammar({
     // =========================================================================
     // RETURN, BREAK, NEXT, RAISE, YIELD
     // =========================================================================
-    return_statement: $ => prec.left(seq('return', optional($.expression))),
+    return_statement: $ => prec.left(choice(
+      seq('return', optional($.expression)),
+      seq('return', 'if', $.expression),
+      seq('return', 'unless', $.expression),
+    )),
 
-    break_statement: $ => prec.left(seq('break', optional($.expression))),
+    break_statement: $ => prec.left(choice(
+      seq('break', optional($.expression)),
+      seq('break', 'if', $.expression),
+      seq('break', 'unless', $.expression),
+    )),
 
-    next_statement: $ => prec.left(seq('next', optional($.expression))),
+    next_statement: $ => prec.left(choice(
+      seq('next', optional($.expression)),
+      seq('next', 'if', $.expression),
+      seq('next', 'unless', $.expression),
+    )),
 
     raise_statement: $ => prec.left(seq('raise', $.expression)),
 
     yield_expression: $ => prec.left(seq('yield', optional(choice(
       $.argument_list,
+      seq('*', $.expression),
       $.expression,
     )))),
 
@@ -577,6 +604,7 @@ module.exports = grammar({
       ),
       optional($.method_params),
       optional(seq(':', field('return_type', $.type))),
+      optional(seq('forall', commaSep1($.constant))),
     )),
 
     operator_method_def: $ => choice(
@@ -602,6 +630,7 @@ module.exports = grammar({
     ),
 
     _simple_param: $ => seq(
+      optional(field('external_name', $.identifier)),
       field('name', choice($.identifier, $.instance_variable)),
       optional(seq(':', field('type', $.type))),
       optional(seq('=', field('default', $.expression))),
@@ -649,10 +678,7 @@ module.exports = grammar({
     // =========================================================================
     // All {% ... %} and {{ ... }} blocks are opaque tokens.
     // Crystal code between them parses as regular statements.
-    macro_statement: $ => choice(
-      $.macro_control_statement,
-      $.macro_expression_statement,
-    ),
+    macro_statement: $ => $.macro_control_statement,
 
     // {% ... %} — opaque macro control tag (if/unless/for/begin/end/bare code)
     macro_control_statement: $ => token(seq('{%', /([^%]|%[^}])+/, '%}')),
@@ -781,6 +807,10 @@ module.exports = grammar({
       $.typeof_type,
       $.underscore_type,
       $.scoped_type,
+      // These keywords are also valid as standalone type constants (e.g., in union types)
+      alias('StaticArray', $.constant),
+      alias('Proc', $.constant),
+      alias('NamedTuple', $.constant),
     ),
 
     // Type name used in class/module/struct definitions — allows Foo, Foo(T), Foo::Bar, Foo::Bar(T)
@@ -947,13 +977,17 @@ module.exports = grammar({
       $.parenthesized_expression,
       $.self,
       $.proc_literal,
+      $.macro_expression_statement,
     ),
 
-    // Scoped constant access: Foo::Bar, Foo::Bar::Baz
-    scoped_constant: $ => prec.left(PREC.SCOPE, seq(
-      choice($.constant, $.scoped_constant),
-      '::',
-      $.constant,
+    // Scoped constant access: Foo::Bar, Foo::Bar::Baz, ::Foo (global scope)
+    scoped_constant: $ => prec.left(PREC.SCOPE, choice(
+      seq(
+        choice($.constant, $.scoped_constant),
+        '::',
+        $.constant,
+      ),
+      seq('::', $.constant),  // global scope prefix
     )),
 
     // Generic type used as expression: Array(Int32), Hash(String, Int32), Foo::Bar(Int32)

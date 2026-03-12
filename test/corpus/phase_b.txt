@@ -146,7 +146,7 @@ Macro expression statement
 ---
 
 (source_file
-  (macro_statement (macro_expression_statement)))
+  (primary (macro_expression_statement)))
 
 ==================
 Macro begin/end wrapping code
