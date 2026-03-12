@@ -1,0 +1,152 @@
+==================
+Macro interpolation as standalone expression
+==================
+
+{{ @type }}
+
+---
+
+(source_file
+  (primary (macro_expression_statement)))
+
+==================
+Macro interpolation with scoped constant
+==================
+
+{{@type}}::MIN
+
+---
+
+(source_file
+  (primary
+    (scoped_constant
+      (macro_expression_statement)
+      (constant))))
+
+==================
+Macro interpolation as dot expression receiver
+==================
+
+{{x}}.method
+
+---
+
+(source_file
+  (dot_expression
+    receiver: (primary (macro_expression_statement))
+    method: (identifier)))
+
+==================
+Macro interpolation as dot expression receiver with args
+==================
+
+{{int_class}}.new(value)
+
+---
+
+(source_file
+  (dot_expression
+    receiver: (primary (macro_expression_statement))
+    method: (identifier)
+    arguments: (argument_list
+      (argument
+        (primary (identifier))))))
+
+==================
+Macro interpolation as index expression receiver
+==================
+
+{{x}}[i]
+
+---
+
+(source_file
+  (index_expression
+    receiver: (primary (macro_expression_statement))
+    (primary (identifier))))
+
+==================
+Macro interpolation in parenthesized call argument
+==================
+
+foo({{bar}})
+
+---
+
+(source_file
+  (call
+    method: (identifier)
+    arguments: (argument_list_no_parens
+      (argument
+        (primary
+          (parenthesized_expression
+            (primary (macro_expression_statement))))))))
+
+==================
+Macro interpolation in binary expression
+==================
+
+x > {{max_value}}
+
+---
+
+(source_file
+  (binary_expression
+    left: (primary (identifier))
+    right: (primary (macro_expression_statement))))
+
+==================
+Macro interpolation in assignment
+==================
+
+y = {{x}}
+
+---
+
+(source_file
+  (assignment
+    (assignment_target (identifier))
+    (primary (macro_expression_statement))))
+
+==================
+Macro interpolation scoped constant in binary expression
+==================
+
+self == {{@type}}::MIN
+
+---
+
+(source_file
+  (binary_expression
+    left: (primary (self))
+    right: (primary
+      (scoped_constant
+        (macro_expression_statement)
+        (constant)))))
+
+==================
+Macro interpolation as generic instance
+==================
+
+{{type}}(Int32)
+
+---
+
+(source_file
+  (primary
+    (generic_instance
+      (macro_expression_statement)
+      (type (constant)))))
+
+==================
+Macro interpolation chained dot call
+==================
+
+{{value}}.bytesize
+
+---
+
+(source_file
+  (dot_expression
+    receiver: (primary (macro_expression_statement))
+    method: (identifier)))
