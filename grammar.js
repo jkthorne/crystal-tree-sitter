@@ -94,6 +94,9 @@ module.exports = grammar({
   // Tree-sitter's GLR parser can handle these by trying both alternatives.
   conflicts: $ => [
     [$.fun_def],
+    [$.fun_def, $.metaclass_type],
+    [$.type_def, $.metaclass_type],
+    [$.metaclass_type, $.hash_literal],
     [$.argument, $.parenthesized_expression],
     [$.assignment_target, $.primary],
     [$.primary, $._method_name],
@@ -104,6 +107,8 @@ module.exports = grammar({
     [$.visibility_modifier, $.primary],
     [$.visibility_modifier, $.expression],
     [$.proc_type],
+    [$.metaclass_type, $.uninitialized_expression],
+    [$.metaclass_type, $.array_literal],
   ],
 
   // Supertypes create abstract node categories in the AST.
@@ -907,6 +912,7 @@ module.exports = grammar({
       $.self_type,
       $.typeof_type,
       $.underscore_type,
+      $.metaclass_type,
       $.scoped_type,
       // These keywords are also valid as standalone type constants (e.g., in union types)
       alias('StaticArray', $.constant),
@@ -991,6 +997,7 @@ module.exports = grammar({
     self_type: $ => 'self',
     typeof_type: $ => seq('typeof', '(', commaSep1($.expression), ')'),
     underscore_type: $ => '_',
+    metaclass_type: $ => prec.left(seq($.type, '.', 'class')),
     scoped_type: $ => prec(3, seq(choice($.constant, $.scoped_constant), '::', $.type)),
 
     // =========================================================================

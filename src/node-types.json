@@ -1841,6 +1841,21 @@
     }
   },
   {
+    "type": "metaclass_type",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": false,
+      "required": true,
+      "types": [
+        {
+          "type": "type",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
     "type": "method_def",
     "named": true,
     "fields": {
@@ -2973,6 +2988,10 @@
         },
         {
           "type": "generic_type",
+          "named": true
+        },
+        {
+          "type": "metaclass_type",
           "named": true
         },
         {

@@ -255,3 +255,20 @@ x : NamedTuple(name: String, age: Int32)
         (identifier)
         (type
           (constant))))))
+
+================================================================================
+Metaclass type in is_a check
+================================================================================
+
+x.is_a?(Foo.class)
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (is_a_expression
+    (primary
+      (identifier))
+    (type
+      (metaclass_type
+        (type
+          (constant))))))

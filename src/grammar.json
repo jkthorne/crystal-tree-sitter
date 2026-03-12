@@ -4565,6 +4565,10 @@
         },
         {
           "type": "SYMBOL",
+          "name": "metaclass_type"
+        },
+        {
+          "type": "SYMBOL",
           "name": "scoped_type"
         },
         {
@@ -5159,6 +5163,27 @@
     "underscore_type": {
       "type": "STRING",
       "value": "_"
+    },
+    "metaclass_type": {
+      "type": "PREC_LEFT",
+      "value": 0,
+      "content": {
+        "type": "SEQ",
+        "members": [
+          {
+            "type": "SYMBOL",
+            "name": "type"
+          },
+          {
+            "type": "STRING",
+            "value": "."
+          },
+          {
+            "type": "STRING",
+            "value": "class"
+          }
+        ]
+      }
     },
     "scoped_type": {
       "type": "PREC",
@@ -7051,6 +7076,18 @@
       "fun_def"
     ],
     [
+      "fun_def",
+      "metaclass_type"
+    ],
+    [
+      "type_def",
+      "metaclass_type"
+    ],
+    [
+      "metaclass_type",
+      "hash_literal"
+    ],
+    [
       "argument",
       "parenthesized_expression"
     ],
@@ -7089,6 +7126,14 @@
     ],
     [
       "proc_type"
+    ],
+    [
+      "metaclass_type",
+      "uninitialized_expression"
+    ],
+    [
+      "metaclass_type",
+      "array_literal"
     ]
   ],
   "precedences": [],
