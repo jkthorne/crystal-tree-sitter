@@ -3522,11 +3522,15 @@
             "name": "macro_interpolation"
           },
           {
-            "type": "PATTERN",
-            "value": "[^{%\\\\]+"
+            "type": "SYMBOL",
+            "name": "macro_plain_text"
           }
         ]
       }
+    },
+    "macro_plain_text": {
+      "type": "PATTERN",
+      "value": "[^{%\\\\a-zA-Z_]+|[a-zA-Z_][a-zA-Z0-9_]*"
     },
     "macro_expression": {
       "type": "SEQ",
@@ -3537,7 +3541,7 @@
         },
         {
           "type": "PATTERN",
-          "value": "[^}]+"
+          "value": "([^}]|}[^}])+"
         },
         {
           "type": "STRING",
@@ -3554,7 +3558,7 @@
         },
         {
           "type": "PATTERN",
-          "value": "[^%]+"
+          "value": "([^%]|%[^}])+"
         },
         {
           "type": "STRING",

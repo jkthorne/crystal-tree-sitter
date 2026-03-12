@@ -631,12 +631,15 @@ module.exports = grammar({
       $.macro_expression,
       $.macro_control,
       $.macro_interpolation,
-      /[^{%\\]+/,  // plain text
+      $.macro_plain_text,
     )),
 
-    macro_expression: $ => seq('{{', /[^}]+/, '}}'),
+    // Plain text in macro body — excludes word chars so `end` keyword is not consumed
+    macro_plain_text: $ => /[^{%\\a-zA-Z_]+|[a-zA-Z_][a-zA-Z0-9_]*/,
 
-    macro_control: $ => seq('{%', /[^%]+/, '%}'),
+    macro_expression: $ => seq('{{', /([^}]|}[^}])+/, '}}'),
+
+    macro_control: $ => seq('{%', /([^%]|%[^}])+/, '%}'),
 
     macro_interpolation: $ => seq('\\{', '{', /[^}]+/, '}', '}'),
 

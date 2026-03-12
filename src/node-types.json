@@ -1728,7 +1728,7 @@
     "fields": {},
     "children": {
       "multiple": true,
-      "required": false,
+      "required": true,
       "types": [
         {
           "type": "macro_control",
@@ -1740,6 +1740,10 @@
         },
         {
           "type": "macro_interpolation",
+          "named": true
+        },
+        {
+          "type": "macro_plain_text",
           "named": true
         }
       ]
@@ -3794,6 +3798,10 @@
   {
     "type": "macro",
     "named": false
+  },
+  {
+    "type": "macro_plain_text",
+    "named": true
   },
   {
     "type": "method_identifier",
