@@ -1,0 +1,211 @@
+==================
+Abstract def with forall
+==================
+
+abstract def foo(x : T) : T forall T
+
+---
+
+(source_file
+  (abstract_def
+    name: (identifier)
+    (method_params
+      (param
+        name: (identifier)
+        type: (type
+          (constant))))
+    return_type: (type
+      (constant))
+    (constant)))
+
+==================
+Return with modifier if
+==================
+
+def foo
+  return if done
+end
+
+---
+
+(source_file
+  (method_def
+    name: (identifier)
+    (return_statement
+      (primary
+        (identifier)))))
+
+==================
+Return with value and modifier if
+==================
+
+def foo
+  return "" if count == 0
+end
+
+---
+
+(source_file
+  (method_def
+    name: (identifier)
+    (return_statement
+      (modifier_if
+        (primary
+          (string_literal))
+        (binary_expression
+          left: (primary
+            (identifier))
+          right: (primary
+            (integer_literal)))))))
+
+==================
+Break with modifier if
+==================
+
+while true
+  break if done
+end
+
+---
+
+(source_file
+  (while_expression
+    condition: (primary
+      (bool_literal))
+    (then_block
+      (break_statement
+        (primary
+          (identifier))))))
+
+==================
+Next with modifier unless
+==================
+
+arr.each do |x|
+  next unless x > 0
+end
+
+---
+
+(source_file
+  (dot_expression
+    receiver: (primary
+      (identifier))
+    method: (identifier)
+    (block
+      (block_params
+        (block_param
+          (identifier)))
+      (next_statement
+        (binary_expression
+          left: (primary
+            (identifier))
+          right: (primary
+            (integer_literal)))))))
+
+==================
+Global scope constant
+==================
+
+::Foo::Bar
+
+---
+
+(source_file
+  (primary
+    (scoped_constant
+      (scoped_constant
+        (constant))
+      (constant))))
+
+==================
+Global scope method call
+==================
+
+::raise "error"
+
+---
+
+(source_file
+  (call
+    method: (identifier)
+    arguments: (argument_list_no_parens
+      (argument
+        (primary
+          (string_literal
+            (string_content)))))))
+
+==================
+Yield with splat
+==================
+
+def foo
+  yield *args
+end
+
+---
+
+(source_file
+  (method_def
+    name: (identifier)
+    (yield_expression
+      (primary
+        (identifier)))))
+
+==================
+External parameter name
+==================
+
+def foo(from start : Int32)
+  start
+end
+
+---
+
+(source_file
+  (method_def
+    name: (identifier)
+    (method_params
+      (param
+        external_name: (identifier)
+        name: (identifier)
+        type: (type
+          (constant))))
+    (primary
+      (identifier))))
+
+==================
+Three-way union type
+==================
+
+x : Array | Slice | StaticArray
+
+---
+
+(source_file
+  (type_declaration
+    name: (identifier)
+    type: (type
+      (union_type
+        (type
+          (union_type
+            (type
+              (constant))
+            (type
+              (constant))))
+        (type
+          (constant))))))
+
+==================
+StaticArray as standalone type
+==================
+
+x : StaticArray
+
+---
+
+(source_file
+  (type_declaration
+    name: (identifier)
+    type: (type
+      (constant))))
