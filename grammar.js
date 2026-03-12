@@ -980,10 +980,10 @@ module.exports = grammar({
       $.macro_expression_statement,
     ),
 
-    // Scoped constant access: Foo::Bar, Foo::Bar::Baz, ::Foo (global scope)
+    // Scoped constant access: Foo::Bar, Foo::Bar::Baz, ::Foo (global scope), {{@type}}::MIN
     scoped_constant: $ => prec.left(PREC.SCOPE, choice(
       seq(
-        choice($.constant, $.scoped_constant),
+        choice($.constant, $.scoped_constant, $.macro_expression_statement),
         '::',
         $.constant,
       ),
