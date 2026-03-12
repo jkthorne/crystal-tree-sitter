@@ -581,7 +581,7 @@ module.exports = grammar({
     yield_expression: $ => prec.left(seq('yield', optional(choice(
       $.argument_list,
       seq('*', $.expression),
-      $.expression,
+      commaSep1($.expression),
     )))),
 
     // =========================================================================
