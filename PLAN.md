@@ -1,97 +1,137 @@
 # Crystal Tree-Sitter Grammar: Production Readiness Plan
 
-## Current State: Alpha (v0.1.0)
+## Current State: Alpha (v0.2.0) — Post Phase A+B
 
-- **129 tests, 100% passing** — but tests cover happy paths only
-- **Real-world parsing: ~85-90% error rate** on Crystal stdlib files (`string.cr`: 742 errors in 5896 lines)
-- The grammar handles isolated statements well but fails on common Crystal patterns used in real code
+- **175 tests, 100% passing**
+- **Real-world parsing:** array.cr at 1.6% error rate, but macro-heavy files (string.cr, int.cr) still have cascading failures from `{{ }}` inside expressions
+- Phases A and B are complete. The grammar handles most Crystal syntax correctly in isolation. The remaining gaps fall into two categories: (1) macro interpolation in expression context, and (2) a dozen missing syntax patterns that are individually small but collectively account for most remaining errors in macro-free code.
 
-## Critical Gaps (Blocking Production Use)
+## Benchmark Results
 
-### Tier 1 — Fundamental Syntax Failures
+| File | Lines | Baseline | Post-A | Post-B | Error Rate |
+|------|-------|----------|--------|--------|------------|
+| string.cr | 5896 | 742 | 231 | 183 | 3.1% (but file-wide ERROR from `{{ }}`) |
+| int.cr | 2864 | 254 | 228 | 200 | 7.0% (but file-wide ERROR from `{{ }}`) |
+| array.cr | 2269 | 232 | 115 | 36 | 1.6% |
+| json/builder.cr | 452 | 46 | 13 | 13 | 2.9% |
+| enumerable.cr | 2350 | — | — | 80 | 3.4% (file-wide ERROR from `forall`) |
+| hash.cr | 2300 | — | — | 77 | 3.3% |
 
-| # | Gap | Impact | Example |
-|---|-----|--------|---------|
-| 1 | **Scoped constant expressions** | `Foo::Bar` as expression parses `::Bar` as symbol literal | `JSON::Builder`, `HTTP::Client` |
-| 2 | **Scoped class/module/struct/enum names** | `class Foo::Bar` fails entirely | Nearly every stdlib file |
-| 3 | **Method names with `?` `!` `=`** | `def foo?`, `def save!`, `def name=` all error | ~40% of Crystal methods |
-| 4 | **Integer type suffixes** | `42_u8`, `1_i64` parsed as int + identifier | Common in Crystal |
-| 5 | **Index assignment** | `x[0] = 1` fails | Array/Hash mutation |
-| 6 | **Named tuple literals** | `{name: "foo"}` fails (colon ambiguity) | Common data pattern |
-| 7 | **Identifier pattern** | `/[a-z_][a-zA-Z0-9_]*/` excludes `?` and `!` suffixes | `empty?`, `nil?`, `save!` |
+**Note:** The "error rate" numbers for string.cr, int.cr, and enumerable.cr are misleading — these files have a single file-wide `ERROR` node wrapping most of the tree because one early syntax failure cascades. The actual number of _root cause_ errors is much smaller. Fixing the cascading triggers would dramatically reduce error counts.
 
-### Tier 2 — Common Patterns Missing
+## Remaining Gaps
 
-| # | Gap | Impact | Example |
-|---|-----|--------|---------|
-| 8 | **Line continuation in strings** | `"hello \<newline>world"` | Multi-line strings |
-| 9 | **Macro bodies** | Regex-based `/[^}]+/` — doesn't parse real Crystal inside macros | All macro-heavy code |
-| 10 | **`record` macro** | Parsed as call (works accidentally) but no special AST | Common pattern |
-| 11 | **`property`/`getter`/`setter`** | Same — parsed as calls (OK for now) | Every model class |
-| 12 | **`||=` and `&&=`** | Need to verify these work as assignment operators | Memoization patterns |
-| 13 | **Operator `[]=`** | Index assignment operator method def | Custom collections |
+### Tier 1 — Cascading Error Triggers
+
+These cause file-wide `ERROR` nodes that swallow hundreds of lines of otherwise-valid code. Fixing these has outsized impact.
+
+| # | Gap | Trigger | Files Affected |
+|---|-----|---------|----------------|
+| 1 | **`{{ }}` in expression context** | `{{@type}}::MIN`, `{{ table.splat }}` | string.cr, int.cr, json/builder.cr |
+| 2 | **`forall` clause** | `def foo(x : T) forall T` | enumerable.cr, hash.cr |
+| 3 | **`return`/`break`/`next` with modifier `if`/`unless`** | `return if x != 0` | array.cr, enumerable.cr |
+
+### Tier 2 — Common Syntax Patterns
+
+These produce localized errors. Each is straightforward to fix but they appear frequently.
+
+| # | Gap | Example | Impact |
+|---|-----|---------|--------|
+| 4 | **External parameter names** | `def foo(from start : Int)` | Method signatures in stdlib |
+| 5 | **3+ union types in params** | `x : Array \| Slice \| StaticArray` | Only 2-way unions work |
+| 6 | **Global scope prefix** | `::raise "error"` | Error handling in stdlib |
+| 7 | **`yield *splat`** | `yield *tuple` | Iterator patterns |
+| 8 | **Named tuple literals** | `{name: "foo"}` | Deferred from Phase A |
+| 9 | **Symbol in no-paren calls** | `puts :flush` | `:` lexed as type annotation |
+| 10 | **String line continuation** | `"hello " \<newline>"world"` | Multi-line strings |
+| 11 | **`x.not_nil!`** | `!` method suffix on dot call | Common pattern |
+| 12 | **Semicolons in do blocks** | `foo do; end` (single-line) | Minor edge case |
 
 ### Tier 3 — Production Polish
 
-| # | Gap | Example |
-|---|-----|---------|
-| 14 | Error recovery | Parser cascades errors instead of recovering |
-| 15 | Precedence tuning | No-paren calls eat binary expressions |
-| 16 | Comprehensive test corpus | Only 129 tests vs real-world complexity |
-| 17 | Highlights coverage | Missing scoped constant highlighting |
-| 18 | `locals.scm` refinement | Variable scoping incomplete |
-| 19 | Fuzz testing | No adversarial testing done |
+| # | Gap |
+|---|-----|
+| 13 | Error recovery — parser cascades errors instead of recovering |
+| 14 | No-paren call precedence — greedy parsing eats binary expressions |
+| 15 | Expand test corpus to 500+ |
+| 16 | Fuzz testing |
+| 17 | Query polish (highlights/tags/locals for all node types) |
+| 18 | CI pipeline with stdlib error-rate regression targets |
 
 ## Implementation Plan
 
-### Phase A: Fix Critical Syntax (Tier 1) — Unblocks real-world parsing
+### Phase C: Fix Cascading Triggers + Common Patterns
 
-**This is the clear priority.** Fixing items 1-7 would likely drop the stdlib error rate from ~85% to ~20%. Scoped constants (`Foo::Bar`) alone would fix the majority of errors since nearly every Crystal file uses namespaced types and the entire parse tree collapses when a class definition fails.
+**Goal:** Eliminate file-wide `ERROR` nodes and fix the most common localized errors. This should bring all benchmark files below 1% error rate (excluding macro interpolation inside expressions, which needs Phase D).
 
-1. **Fix identifier pattern** — Change `IDENTIFIER` to `/[a-z_][a-zA-Z0-9_]*[?!]?/` so method names with `?`/`!` work natively
-2. **Add scoped constant expression** — Add `scoped_constant` rule: `seq($.constant, '::', $.constant)` (recursive) usable both in types AND expressions
-3. **Fix class/module/struct/enum names** — Allow scoped names (`Foo::Bar`) in definition name position
-4. **Add integer type suffixes** — Extend `integer_literal` regex to include optional `_?[uif](8|16|32|64|128)`
-5. **Fix index assignment** — Add `index_expression` as valid `assignment_target`
-6. **Add named tuple literals** — Requires external scanner help or careful precedence to distinguish from hash/block
-7. **Add `def name=`** — Allow `identifier=` (with `=` suffix) as method name in `method_def`
+**Priority order** (by impact, easiest first):
 
-### Phase B: Common Patterns (Tier 2) — Handles 90%+ of real code
+1. **`forall` clause** — Add `forall` keyword + type variable list to `method_def` and `abstract_def`. Pure grammar change, no scanner work.
 
-8. **String line continuation** — Handle `\<newline>` in scanner's string content handling
-9. **Improve macro parsing** — At minimum, properly match `{{...}}` and `{%...%}` with nesting; ideally parse Crystal expressions inside `{{...}}`
-10. **Verify and fix assignment operators** — Ensure `||=`, `&&=`, `<<=`, `>>=` all work
-11. **Test `[]=` operator method** — Ensure `def []=(index, value)` works
+2. **`return`/`break`/`next` + modifier `if`/`unless`** — These jump statements don't currently support trailing `if`/`unless` modifiers. Need to allow `_expression_with_modifier` or similar in their production rules.
 
-### Phase C: Production Polish (Tier 3)
+3. **External parameter names** — Allow an optional leading identifier as external name in method params: `def foo(external_name internal_name : Type)`. Grammar-only change to param rule.
 
-12. **Add error recovery** — Use tree-sitter's `ERROR` recovery with `prec.dynamic` and strategic error tokens
-13. **Fix no-paren call precedence** — This is the single hardest problem; may need external scanner help to disambiguate
-14. **Expand test corpus** — Target 500+ tests covering all real-world patterns, test against Crystal stdlib
-15. **Benchmark** — Parse speed should be <1ms for typical files; test memory usage
-16. **Fuzz testing** — Use tree-sitter's built-in fuzzer
-17. **Query polish** — Update highlights/tags/locals for new node types
-18. **CI pipeline** — Automated testing against Crystal stdlib files with error-rate targets
+4. **3+ union types** — The union type rule likely isn't properly recursive. Fix to `repeat1(seq('|', type))` or similar so `A | B | C | D` works.
 
-### Phase D: Advanced Features
+5. **Global scope `::` prefix** — Add `::` as valid prefix for method calls and constant references. Need `::constant` and `::identifier(args)` patterns.
 
-19. **Macro refinement** — Full macro body parsing (may need separate parse mode)
-20. **C binding improvements** — Callback types, variadic functions
-21. **Concurrency** — `select`/`when` for channels (basic version works but needs testing)
-22. **Editor integration testing** — Neovim, Helix, Zed, VS Code
+6. **`yield *splat`** — Allow `*` (splat) before yield arguments.
+
+7. **`x.not_nil!`** — The `!` suffix on method identifiers after `.` needs to be recognized in dot_expression method position.
+
+8. **String line continuation** — Handle backslash-newline in scanner's string content. Scanner change.
+
+9. **Named tuple literals** — Requires external scanner to disambiguate `{name:` (named tuple) from `{` (block/hash). This is the hardest item in this phase.
+
+10. **Symbol in no-paren calls** — External scanner to distinguish `:symbol` from `:` (type annotation) based on preceding context.
+
+11. **Semicolons in do blocks** — Ensure `;` works as statement terminator inside do blocks.
+
+### Phase D: Macro Interpolation in Expressions
+
+**Goal:** Make `{{ }}` work inside expression context so `{{@type}}::MIN` and `foo({{bar}})` parse correctly.
+
+**Approach:** This requires external scanner support. The scanner needs to:
+- Recognize `{{` inside expression context (not just at statement level)
+- Emit it as a token that can participate in expressions
+- Handle the content opaquely (or parse Crystal inside)
+- Recognize `}}` and resume normal expression parsing
+
+This is architecturally the hardest remaining problem because `{{ }}` needs to act as an expression placeholder that can appear anywhere a constant/identifier/expression could.
+
+**Options:**
+- **Option A: Macro expression as primary** — Make `{{ ... }}` a valid `primary` expression so it composes naturally. The scanner emits `MACRO_EXPR_START`/`MACRO_EXPR_END` tokens. Grammar wraps content as opaque.
+- **Option B: Two-pass parsing** — Pre-process files to replace `{{ }}` with placeholder identifiers, parse, then map back. Simpler but requires tooling wrapper.
+- **Option C: Accept limitation** — Document that macro-heavy files parse with errors. Focus on making non-macro code perfect.
+
+### Phase E: Production Polish
+
+1. **Error recovery** — Add tree-sitter error recovery with `prec.dynamic` and strategic error tokens at statement boundaries
+2. **No-paren call precedence** — Hardest grammar problem; may need external scanner context
+3. **Test corpus expansion** — Target 500+ tests, including all patterns from stdlib
+4. **Fuzz testing** — tree-sitter's built-in fuzzer
+5. **Benchmark** — Parse speed <1ms for typical files
+6. **Query completeness** — highlights/tags/locals for every node type
+7. **CI pipeline** — Automated stdlib parsing with error-rate regression targets
+
+### Phase F: Advanced Features
+
+1. **Full macro body parsing** — Parse Crystal expressions inside `{{ }}`
+2. **C binding improvements** — Callback types, variadic functions
+3. **Concurrency** — `select`/`when` for channels
+4. **Editor integration testing** — Neovim, Helix, Zed, VS Code
 
 ## Validation Targets
 
-| Milestone | Stdlib Error Rate | Test Count |
-|-----------|------------------|------------|
-| Phase A complete | <20% | 200+ |
-| Phase B complete | <5% | 350+ |
-| Phase C complete | <1% | 500+ |
-| Phase D complete | <0.5% | 500+ |
+| Milestone | Stdlib Error Rate (non-macro files) | Stdlib Error Rate (macro files) | Test Count |
+|-----------|-------------------------------------|--------------------------------|------------|
+| Phase B complete (current) | ~1.6% (array.cr) | ~3-7% (cascading) | 175 |
+| Phase C complete | <0.5% | ~2-5% (macro `{{ }}` only) | 300+ |
+| Phase D complete | <0.5% | <1% | 400+ |
+| Phase E complete | <0.1% | <0.5% | 500+ |
 
 ## Testing Methodology
-
-Parse these Crystal stdlib files and track error counts as a regression benchmark:
 
 ```sh
 # Download test files
@@ -99,73 +139,55 @@ curl -sL "https://raw.githubusercontent.com/crystal-lang/crystal/master/src/stri
 curl -sL "https://raw.githubusercontent.com/crystal-lang/crystal/master/src/int.cr" > /tmp/crystal_int.cr
 curl -sL "https://raw.githubusercontent.com/crystal-lang/crystal/master/src/array.cr" > /tmp/crystal_array.cr
 curl -sL "https://raw.githubusercontent.com/crystal-lang/crystal/master/src/json/builder.cr" > /tmp/crystal_json.cr
+curl -sL "https://raw.githubusercontent.com/crystal-lang/crystal/master/src/enumerable.cr" > /tmp/crystal_enumerable.cr
+curl -sL "https://raw.githubusercontent.com/crystal-lang/crystal/master/src/hash.cr" > /tmp/crystal_hash.cr
 
-# Baseline (2026-03-11, before Phase A)
-# string.cr:  5896 lines, 742 errors
-# int.cr:     2864 lines, 254 errors
-# array.cr:   2269 lines, 232 errors
-# json/builder.cr: 452 lines, 46 errors
-
-# After Phase A (2026-03-11)
-# string.cr:  5896 lines, 231 errors  (-69%)
-# int.cr:     2864 lines, 228 errors  (-10%)
-# array.cr:   2269 lines, 115 errors  (-50%)
-# json/builder.cr: 452 lines, 13 errors (-72%)
-# Test count: 159 (was 129)
-
-# After Phase B (2026-03-11)
-# string.cr:  5896 lines, 183 errors  (-21% from A, -75% from baseline)
-# int.cr:     2864 lines, 200 errors  (-12% from A, -21% from baseline)
-# array.cr:   2269 lines, 36 errors   (-69% from A, -84% from baseline)
-# json/builder.cr: 452 lines, 13 errors (unchanged)
-# Test count: 175 (was 159)
+# Parse and count errors
+for f in /tmp/crystal_*.cr; do
+  lines=$(wc -l < "$f")
+  errors=$(npx tree-sitter parse "$f" 2>&1 | grep -c "ERROR\|MISSING")
+  echo "$(basename $f): $lines lines, $errors errors"
+done
 ```
 
-## Phase A Implementation Notes
+### Historical Results
 
-### Completed
-1. **Scoped constant expressions** — Added `scoped_constant` rule for `Foo::Bar` in expression context
-2. **Scoped class/module/struct/enum names** — Added `scoped_type_name` and `_type_identifier` rules
-3. **Method names with `?` and `!`** — Added `method_identifier` token and `_method_name` rule
-4. **Setter method names (`=`)** — Added `setter_method_name` token, used in `_def_name`
-5. **Integer type suffixes** — Extended `integer_literal` with `[iu](8|16|32|64|128)`
-6. **Index assignment** — Added `index_expression` and `dot_expression` to `assignment_target`
-7. **Arrow proc types** — Added `Type -> Type` and `-> Type` syntax to `proc_type`
-8. **Anonymous block types** — `& : IO ->` now works in block_param_def
-9. **Yield with expression** — `yield @value` now works
-10. **Symbol suffixes** — `:foo?`, `:bar!`, `:name=` symbols now parse
-11. **When with dot method** — `.nan?` in when clauses works
-12. **Out arguments** — `out x` in function calls
-13. **Scoped PREC level** — Added SCOPE=19 precedence
+| Date | Phase | string.cr | int.cr | array.cr | json/builder.cr |
+|------|-------|-----------|--------|----------|-----------------|
+| 2026-03-11 | Baseline | 742 errors | 254 errors | 232 errors | 46 errors |
+| 2026-03-11 | Post-A | 231 (-69%) | 228 (-10%) | 115 (-50%) | 13 (-72%) |
+| 2026-03-11 | Post-B | 183 (-75%) | 200 (-21%) | 36 (-84%) | 13 (-72%) |
 
-### Deferred to Phase B
-- **Named tuple literals** — `{name: "foo"}` causes cascading conflicts with blocks/hash/tuple.
-  Needs external scanner support to disambiguate `{` contexts.
+## Completed Phase Notes
 
-### Known remaining issues (pre-existing)
-- **Symbol in no-paren calls** — `puts :flush` fails because `:` is lexed separately.
-  Needs external scanner to distinguish `:symbol` from `:` (type annotation).
+### Phase A: Critical Syntax (Complete)
 
-## Phase B Implementation Notes
+1. Scoped constant expressions (`Foo::Bar`)
+2. Scoped class/module/struct/enum names
+3. Method names with `?` and `!` (method_identifier token)
+4. Setter method names (`def name=`)
+5. Integer type suffixes (`42_u8`, `1_i64`)
+6. Index assignment (`x[0] = 1`)
+7. Arrow proc types (`Type -> Type`)
+8. Anonymous block types (`& : IO ->`)
+9. Yield with expression (`yield @value`)
+10. Symbol suffixes (`:foo?`, `:bar!`, `:name=`)
+11. When with dot method (`.nan?` in case/when)
+12. Out arguments (`out x`)
+13. Scoped PREC level (SCOPE=19)
 
-### Completed
-1. **Wrapping operators** — Added `&+`, `&-`, `&*`, `&**` to binary_expression, operator_assignment, and operator_method_def
-2. **Wrapping assignment operators** — Added `&+=`, `&-=`, `&*=`, `&**=`
-3. **Private/protected constants** — Added assignment and type_declaration to visibility_modifier choices
-4. **Private/protected enums** — Added enum_def to visibility_modifier
-5. **Top-level macro statements** — Added `macro_control_statement` (`{% ... %}`) and `macro_expression_statement` (`{{ ... }}`) as opaque tokens at statement level
-6. **Macro body fix** — Fixed `macro_body` regex swallowing `end` keyword, allowing macros inside class/module definitions
-7. **offsetof with instance variables** — Extended offsetof_expression to accept instance_variable
-8. **Macro `%` in content** — Fixed regex to allow `%` inside `{% %}` and `}` inside `{{ }}` blocks
+### Phase B: Common Patterns (Complete)
 
-### Design Decision: Opaque Macro Tokens
-The `{% %}` and `{{ }}` blocks are parsed as opaque single tokens rather than structured AST nodes. This avoids lexer conflicts between `{% if %}` (structured) vs `{% code %}` (bare) while still allowing Crystal code between macro tags to parse correctly. The trade-off is that the macro control flow structure (if/else/end) isn't captured in the tree.
+1. Wrapping operators (`&+`, `&-`, `&*`, `&**`)
+2. Wrapping assignment operators (`&+=`, `&-=`, `&*=`, `&**=`)
+3. Private/protected constants and enums
+4. Top-level macro statements (`{% %}`, `{{ }}` as opaque tokens)
+5. Macro body fix (regex no longer swallows `end`)
+6. offsetof with instance variables
+7. Macro `%` in content fix
 
-### Remaining bottleneck: `{{ }}` inside expressions
-The dominant remaining error source is `{{ }}` used within expressions (e.g., `{{@type}}::MIN`, `to_unsigned_info({{unsigned_int_class}})`). As opaque tokens, these can't participate in expression context. This causes cascading parse failures — a single `{{ }}` inside an expression collapses the entire enclosing class/method definition. Fixing this requires external scanner support (Phase C/D).
+### Design Decisions
 
-### Error analysis
-- **string.cr**: File-wide ERROR persists due to `{{ table.splat }}` at line 552
-- **int.cr**: File-wide ERROR from `{{@type}}::MIN` at line 151
-- **array.cr**: Most errors fixed; remaining are localized (36 errors in 2269 lines = 1.6%)
-- **json/builder.cr**: Unchanged (13 errors, mostly from `{{ }}` in expressions)
+- **Opaque macro tokens:** `{% %}` and `{{ }}` at statement level are opaque single tokens. This avoids lexer conflicts but means macro control flow isn't in the AST. The key remaining problem is that `{{ }}` can't participate in expression context.
+- **Named tuples deferred:** `{name: "foo"}` causes cascading conflicts with blocks/hash/tuple syntax. Needs external scanner to disambiguate `{` context.
+- **Symbol in no-paren calls deferred:** `puts :symbol` fails because `:` is lexed as type annotation separator. Needs external scanner context.
