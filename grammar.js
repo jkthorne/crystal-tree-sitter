@@ -103,6 +103,7 @@ module.exports = grammar({
     [$.expression, $.assignment_target],
     [$.visibility_modifier, $.primary],
     [$.visibility_modifier, $.expression],
+    [$.proc_type],
   ],
 
   // Supertypes create abstract node categories in the AST.
@@ -964,8 +965,9 @@ module.exports = grammar({
         commaSep($.type),
         ')',
       ),
+      // Parenthesized arrow form: (Int32, String -> Bool), (K -> V)
+      seq('(', commaSep1($.type), '->', optional($.type), ')'),
       // Arrow form: Int32 -> String, -> Nil
-      // Single arg doesn't need parens, multi-arg uses parens
       seq($.type, '->', optional($.type)),
       // No-arg arrow form: -> Nil, ->
       seq('->', optional($.type)),

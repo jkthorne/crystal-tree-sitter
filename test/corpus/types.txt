@@ -162,6 +162,81 @@ x : {Int32, String}
           (constant))))))
 
 ================================================================================
+Parenthesized single-arg proc type
+================================================================================
+
+x : (K -> V)?
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (type_declaration
+    name: (identifier)
+    type: (type
+      (nilable_type
+        (type
+          (proc_type
+            (type
+              (constant))
+            (type
+              (constant))))))))
+
+================================================================================
+Parenthesized multi-arg proc type
+================================================================================
+
+@block : (self, K -> V)?
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (type_declaration
+    name: (instance_variable)
+    type: (type
+      (nilable_type
+        (type
+          (proc_type
+            (type
+              (self_type))
+            (type
+              (constant))
+            (type
+              (constant))))))))
+
+================================================================================
+Parenthesized multi-arg proc type in method parameter
+================================================================================
+
+def initialize(block : (Hash(K, V), K -> V)? = nil)
+end
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (method_def
+    name: (identifier)
+    (method_params
+      (param
+        name: (identifier)
+        type: (type
+          (nilable_type
+            (type
+              (proc_type
+                (type
+                  (generic_type
+                    (constant)
+                    (type
+                      (constant))
+                    (type
+                      (constant))))
+                (type
+                  (constant))
+                (type
+                  (constant))))))
+        default: (primary
+          (nil_literal))))))
+
+================================================================================
 Named tuple type in declaration
 ================================================================================
 
