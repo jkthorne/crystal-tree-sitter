@@ -15,12 +15,12 @@ BASE_URL="https://raw.githubusercontent.com/crystal-lang/crystal/master/src"
 
 # file:download_path:threshold_percent
 FILES="
-array:array.cr:2.0
-enumerable:enumerable.cr:3.0
-hash:hash.cr:3.0
-int:int.cr:8.0
-string:string.cr:5.0
-json_builder:json/builder.cr:4.0
+array:array.cr:1.5
+enumerable:enumerable.cr:2.0
+hash:hash.cr:2.0
+int:int.cr:7.0
+string:string.cr:3.5
+json_builder:json/builder.cr:2.5
 "
 
 download_files() {
