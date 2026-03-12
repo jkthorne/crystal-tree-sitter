@@ -1,23 +1,23 @@
 # Crystal Tree-Sitter Grammar: Production Readiness Plan
 
-## Current State: Alpha (v0.2.0) — Post Phase A+B
+## Current State: Alpha (v0.2.0) — Post Phase A+B+C+D
 
-- **175 tests, 100% passing**
-- **Real-world parsing:** array.cr at 1.6% error rate, but macro-heavy files (string.cr, int.cr) still have cascading failures from `{{ }}` inside expressions
-- Phases A and B are complete. The grammar handles most Crystal syntax correctly in isolation. The remaining gaps fall into two categories: (1) macro interpolation in expression context, and (2) a dozen missing syntax patterns that are individually small but collectively account for most remaining errors in macro-free code.
+- **197 tests, 100% passing**
+- **Real-world parsing:** array.cr at 1.3% error rate, macro-heavy files improved (enumerable.cr down 24%)
+- Phases A, B, C, and D are complete. Macro `{{ }}` now works in expression context (dot calls, scoped constants, arguments, binary ops). The remaining gaps are: (1) cascading errors from `{% %}` control flow blocks, and (2) a handful of missing syntax patterns (named tuples, symbol in no-paren calls, `!` method suffix at EOL).
 
 ## Benchmark Results
 
-| File | Lines | Baseline | Post-A | Post-B | Error Rate |
-|------|-------|----------|--------|--------|------------|
-| string.cr | 5896 | 742 | 231 | 183 | 3.1% (but file-wide ERROR from `{{ }}`) |
-| int.cr | 2864 | 254 | 228 | 200 | 7.0% (but file-wide ERROR from `{{ }}`) |
-| array.cr | 2269 | 232 | 115 | 36 | 1.6% |
-| json/builder.cr | 452 | 46 | 13 | 13 | 2.9% |
-| enumerable.cr | 2350 | — | — | 80 | 3.4% (file-wide ERROR from `forall`) |
-| hash.cr | 2300 | — | — | 77 | 3.3% |
+| File | Lines | Baseline | Post-A | Post-B | Post-C | Post-D | Error Rate |
+|------|-------|----------|--------|--------|--------|--------|------------|
+| string.cr | 5896 | 742 | 231 | 183 | 191 | 178 | 3.0% (cascading from `{% %}`) |
+| int.cr | 2864 | 254 | 228 | 200 | 200 | 196 | 6.8% (cascading from `{% %}`) |
+| array.cr | 2269 | 232 | 115 | 36 | 30 | 30 | 1.3% |
+| json/builder.cr | 452 | 46 | 13 | 13 | 12 | 12 | 2.7% |
+| enumerable.cr | 2350 | — | — | 80 | 76 | 58 | 2.5% (improved from `{{ }}` fix) |
+| hash.cr | 2300 | — | — | 77 | 76 | 76 | 3.3% |
 
-**Note:** The "error rate" numbers for string.cr, int.cr, and enumerable.cr are misleading — these files have a single file-wide `ERROR` node wrapping most of the tree because one early syntax failure cascades. The actual number of _root cause_ errors is much smaller. Fixing the cascading triggers would dramatically reduce error counts.
+**Note:** The "error rate" numbers for string.cr and int.cr are still affected by cascading errors from `{% %}` macro control blocks. The `{{ }}` expression fix (Phase D) helped enumerable.cr significantly (-24%). The remaining cascading errors are from `{% for %}` / `{% if %}` blocks that create ERROR nodes which swallow surrounding code.
 
 ## Remaining Gaps
 
@@ -25,11 +25,11 @@
 
 These cause file-wide `ERROR` nodes that swallow hundreds of lines of otherwise-valid code. Fixing these has outsized impact.
 
-| # | Gap | Trigger | Files Affected |
-|---|-----|---------|----------------|
-| 1 | **`{{ }}` in expression context** | `{{@type}}::MIN`, `{{ table.splat }}` | string.cr, int.cr, json/builder.cr |
-| 2 | **`forall` clause** | `def foo(x : T) forall T` | enumerable.cr, hash.cr |
-| 3 | **`return`/`break`/`next` with modifier `if`/`unless`** | `return if x != 0` | array.cr, enumerable.cr |
+| # | Gap | Trigger | Files Affected | Status |
+|---|-----|---------|----------------|--------|
+| 1 | **`{{ }}` in expression context** | `{{@type}}::MIN`, `{{ table.splat }}` | string.cr, int.cr, json/builder.cr | ✅ Phase D |
+| 2 | **`forall` clause** | `def foo(x : T) forall T` | enumerable.cr, hash.cr | ✅ Phase C |
+| 3 | **`return`/`break`/`next` with modifier `if`/`unless`** | `return if x != 0` | array.cr, enumerable.cr | ✅ Phase C |
 
 ### Tier 2 — Common Syntax Patterns
 
@@ -60,50 +60,45 @@ These produce localized errors. Each is straightforward to fix but they appear f
 
 ## Implementation Plan
 
-### Phase C: Fix Cascading Triggers + Common Patterns
+### Phase C: Fix Cascading Triggers + Common Patterns (Complete)
 
-**Goal:** Eliminate file-wide `ERROR` nodes and fix the most common localized errors. This should bring all benchmark files below 1% error rate (excluding macro interpolation inside expressions, which needs Phase D).
+**Results:** array.cr errors reduced from 36 to 30. Fixes for `forall`, `return if`, `::raise`, `yield *splat`, external params, standalone keyword types, and 3+ union types.
 
-**Priority order** (by impact, easiest first):
+**Completed:**
 
-1. **`forall` clause** — Add `forall` keyword + type variable list to `method_def` and `abstract_def`. Pure grammar change, no scanner work.
+1. ✅ **`forall` clause on `abstract_def`** — Was already on `method_def`; added to `abstract_def`.
+2. ✅ **`return`/`break`/`next` + modifier `if`/`unless`** — Added explicit `return if expr` / `return unless expr` alternatives to prevent `return` from consuming `if_expression` as its value.
+3. ✅ **External parameter names** — Added optional `external_name` field to `_simple_param`: `def foo(from start : Int)`.
+4. ✅ **3+ union types** — Binary `union_type` already chains via left-associativity. The real issue was that `StaticArray`, `Proc`, and `NamedTuple` keywords couldn't be used as standalone type constants. Fixed with `alias` in `type` rule.
+5. ✅ **Global scope `::` prefix** — Added `::constant` to `scoped_constant` and `::method(args)` to `call`.
+6. ✅ **`yield *splat`** — Added `seq('*', $.expression)` to `yield_expression`.
+7. ✅ **Semicolons in do blocks** — Already worked (`;` was already in `_terminator`).
 
-2. **`return`/`break`/`next` + modifier `if`/`unless`** — These jump statements don't currently support trailing `if`/`unless` modifiers. Need to allow `_expression_with_modifier` or similar in their production rules.
+**Deferred to Phase D/E:**
 
-3. **External parameter names** — Allow an optional leading identifier as external name in method params: `def foo(external_name internal_name : Type)`. Grammar-only change to param rule.
+8. **`x.save!` at end of line** — Tree-sitter lexer limitation: `!` after identifier at EOL is tokenized as a separate `!` operator instead of being included in `method_identifier`. Works fine when `!(` follows (e.g., `x.save!(y)`). Adding an external scanner token for this breaks case/when parsing due to tree-sitter external token side effects.
+9. **Named tuple literals** — Needs external scanner to disambiguate `{name:` from block/hash.
+10. **Symbol in no-paren calls** — Needs external scanner context.
+11. **String line continuation** — Scanner change, low frequency.
+12. **Multi-arg proc types** — `T, T -> U` in block type annotations not supported (only single-arg arrow form works).
 
-4. **3+ union types** — The union type rule likely isn't properly recursive. Fix to `repeat1(seq('|', type))` or similar so `A | B | C | D` works.
+### Phase D: Macro Interpolation in Expressions (Complete)
 
-5. **Global scope `::` prefix** — Add `::` as valid prefix for method calls and constant references. Need `::constant` and `::identifier(args)` patterns.
+**Results:** enumerable.cr errors reduced from 76 to 58 (-24%). string.cr reduced from 191 to 178 (-7%). int.cr reduced from 200 to 196.
 
-6. **`yield *splat`** — Allow `*` (splat) before yield arguments.
+**Approach:** Pure grammar change — no external scanner needed. Added `macro_expression_statement` (the existing opaque `{{ ... }}` token) to the `primary` rule so it can participate in all expression contexts naturally.
 
-7. **`x.not_nil!`** — The `!` suffix on method identifiers after `.` needs to be recognized in dot_expression method position.
+**Completed:**
 
-8. **String line continuation** — Handle backslash-newline in scanner's string content. Scanner change.
+1. ✅ **`{{ }}` as primary expression** — Added to `primary` rule, removed from `macro_statement` (now flows through expression → statement automatically).
+2. ✅ **`{{@type}}::MIN`** — Updated `scoped_constant` to accept `macro_expression_statement` as LHS of `::`.
+3. ✅ **`{{type}}(Int32)`** — Updated `generic_instance` to accept `macro_expression_statement` as base.
+4. ✅ **`{{x}}.method`** — Works automatically since `dot_expression` takes `$.expression` as receiver.
+5. ✅ **`{{x}}[i]`** — Works automatically since `index_expression` takes `$.expression` as receiver.
+6. ✅ **`foo({{bar}})`** — Works automatically through argument → expression → primary.
+7. ✅ **`x > {{max}}`** — Works automatically through binary_expression.
 
-9. **Named tuple literals** — Requires external scanner to disambiguate `{name:` (named tuple) from `{` (block/hash). This is the hardest item in this phase.
-
-10. **Symbol in no-paren calls** — External scanner to distinguish `:symbol` from `:` (type annotation) based on preceding context.
-
-11. **Semicolons in do blocks** — Ensure `;` works as statement terminator inside do blocks.
-
-### Phase D: Macro Interpolation in Expressions
-
-**Goal:** Make `{{ }}` work inside expression context so `{{@type}}::MIN` and `foo({{bar}})` parse correctly.
-
-**Approach:** This requires external scanner support. The scanner needs to:
-- Recognize `{{` inside expression context (not just at statement level)
-- Emit it as a token that can participate in expressions
-- Handle the content opaquely (or parse Crystal inside)
-- Recognize `}}` and resume normal expression parsing
-
-This is architecturally the hardest remaining problem because `{{ }}` needs to act as an expression placeholder that can appear anywhere a constant/identifier/expression could.
-
-**Options:**
-- **Option A: Macro expression as primary** — Make `{{ ... }}` a valid `primary` expression so it composes naturally. The scanner emits `MACRO_EXPR_START`/`MACRO_EXPR_END` tokens. Grammar wraps content as opaque.
-- **Option B: Two-pass parsing** — Pre-process files to replace `{{ }}` with placeholder identifiers, parse, then map back. Simpler but requires tooling wrapper.
-- **Option C: Accept limitation** — Document that macro-heavy files parse with errors. Focus on making non-macro code perfect.
+**Design decision:** Content inside `{{ }}` remains opaque (not parsed as Crystal). Full macro body parsing deferred to Phase F.
 
 ### Phase E: Production Polish
 
@@ -126,10 +121,11 @@ This is architecturally the hardest remaining problem because `{{ }}` needs to a
 
 | Milestone | Stdlib Error Rate (non-macro files) | Stdlib Error Rate (macro files) | Test Count |
 |-----------|-------------------------------------|--------------------------------|------------|
-| Phase B complete (current) | ~1.6% (array.cr) | ~3-7% (cascading) | 175 |
-| Phase C complete | <0.5% | ~2-5% (macro `{{ }}` only) | 300+ |
-| Phase D complete | <0.5% | <1% | 400+ |
-| Phase E complete | <0.1% | <0.5% | 500+ |
+| Phase B complete | ~1.6% (array.cr) | ~3-7% (cascading) | 175 |
+| Phase C complete | ~1.3% (array.cr) | ~3-7% (cascading) | 186 |
+| Phase D complete (current) | ~1.3% (array.cr) | ~2.5-6.8% (cascading from `{% %}`) | 197 |
+| Phase E complete | <0.5% | <2% | 300+ |
+| Phase F complete | <0.1% | <0.5% | 500+ |
 
 ## Testing Methodology
 
@@ -152,11 +148,13 @@ done
 
 ### Historical Results
 
-| Date | Phase | string.cr | int.cr | array.cr | json/builder.cr |
-|------|-------|-----------|--------|----------|-----------------|
-| 2026-03-11 | Baseline | 742 errors | 254 errors | 232 errors | 46 errors |
-| 2026-03-11 | Post-A | 231 (-69%) | 228 (-10%) | 115 (-50%) | 13 (-72%) |
-| 2026-03-11 | Post-B | 183 (-75%) | 200 (-21%) | 36 (-84%) | 13 (-72%) |
+| Date | Phase | string.cr | int.cr | array.cr | json/builder.cr | enumerable.cr | hash.cr |
+|------|-------|-----------|--------|----------|-----------------|---------------|---------|
+| 2026-03-11 | Baseline | 742 errors | 254 errors | 232 errors | 46 errors | — | — |
+| 2026-03-11 | Post-A | 231 (-69%) | 228 (-10%) | 115 (-50%) | 13 (-72%) | — | — |
+| 2026-03-11 | Post-B | 183 (-75%) | 200 (-21%) | 36 (-84%) | 13 (-72%) | 80 | 77 |
+| 2026-03-12 | Post-C | 191 (-74%) | 200 (-21%) | 30 (-87%) | 12 (-74%) | 76 | 76 |
+| 2026-03-12 | Post-D | 178 (-76%) | 196 (-23%) | 30 (-87%) | 12 (-74%) | 58 (-28%) | 76 |
 
 ## Completed Phase Notes
 
@@ -185,6 +183,24 @@ done
 5. Macro body fix (regex no longer swallows `end`)
 6. offsetof with instance variables
 7. Macro `%` in content fix
+
+### Phase C: Common Patterns (Complete)
+
+1. `forall` clause on `abstract_def`
+2. `return`/`break`/`next` with modifier `if`/`unless`
+3. External parameter names (`def foo(from start : Int)`)
+4. Standalone keyword type constants (`StaticArray`, `Proc`, `NamedTuple` as type aliases)
+5. Global scope `::` prefix for constants and calls
+6. `yield *splat`
+7. Semicolons in do blocks (already worked)
+
+### Phase D: Macro Interpolation in Expressions (Complete)
+
+1. `{{ }}` as primary expression — moved from statement-only to `primary` rule
+2. `{{@type}}::MIN` — `scoped_constant` accepts `macro_expression_statement` as LHS
+3. `{{type}}(Int32)` — `generic_instance` accepts `macro_expression_statement` as base
+4. Dot/index/binary/argument contexts — work automatically through expression composability
+5. No external scanner changes needed — pure grammar approach using existing opaque token
 
 ### Design Decisions
 
