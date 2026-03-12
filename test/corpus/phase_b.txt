@@ -1,0 +1,252 @@
+==================
+Wrapping addition operator
+==================
+
+x &+ y
+
+---
+
+(source_file
+  (binary_expression
+    left: (primary (identifier))
+    right: (primary (identifier))))
+
+==================
+Wrapping subtraction operator
+==================
+
+x &- y
+
+---
+
+(source_file
+  (binary_expression
+    left: (primary (identifier))
+    right: (primary (identifier))))
+
+==================
+Wrapping multiplication operator
+==================
+
+x &* y
+
+---
+
+(source_file
+  (binary_expression
+    left: (primary (identifier))
+    right: (primary (identifier))))
+
+==================
+Wrapping exponentiation operator
+==================
+
+x &** y
+
+---
+
+(source_file
+  (binary_expression
+    left: (primary (identifier))
+    right: (primary (identifier))))
+
+==================
+Wrapping assignment operators
+==================
+
+x &+= 1
+x &-= 2
+x &*= 3
+
+---
+
+(source_file
+  (operator_assignment
+    (assignment_target (identifier))
+    (primary (integer_literal)))
+  (operator_assignment
+    (assignment_target (identifier))
+    (primary (integer_literal)))
+  (operator_assignment
+    (assignment_target (identifier))
+    (primary (integer_literal))))
+
+==================
+Wrapping operator method definition
+==================
+
+def &+(other)
+  self
+end
+
+---
+
+(source_file
+  (method_def
+    name: (operator_method_def)
+    (method_params
+      (param name: (identifier)))
+    (primary (self))))
+
+==================
+Private constant assignment
+==================
+
+private CONST = 1
+
+---
+
+(source_file
+  (visibility_modifier
+    (assignment
+      (assignment_target (constant))
+      (primary (integer_literal)))))
+
+==================
+Private type declaration
+==================
+
+private getter x : Int32
+
+---
+
+(source_file
+  (visibility_modifier
+    (call
+      method: (identifier)
+      arguments: (argument_list_no_parens
+        (argument
+          (named_argument
+            name: (identifier)
+            value: (primary (constant))))))))
+
+==================
+Macro control statement
+==================
+
+{% if flag?(:release) %}
+x = 1
+{% end %}
+
+---
+
+(source_file
+  (macro_statement (macro_control_statement))
+  (assignment
+    (assignment_target (identifier))
+    (primary (integer_literal)))
+  (macro_statement (macro_control_statement)))
+
+==================
+Macro expression statement
+==================
+
+{{ @type }}
+
+---
+
+(source_file
+  (macro_statement (macro_expression_statement)))
+
+==================
+Macro begin/end wrapping code
+==================
+
+{% begin %}
+x = 1
+{% end %}
+
+---
+
+(source_file
+  (macro_statement (macro_control_statement))
+  (assignment
+    (assignment_target (identifier))
+    (primary (integer_literal)))
+  (macro_statement (macro_control_statement)))
+
+==================
+Macro inside class definition
+==================
+
+class Foo
+  macro inherited
+  end
+end
+
+---
+
+(source_file
+  (class_def
+    name: (type_name (constant))
+    (macro_def
+      name: (identifier))))
+
+==================
+Macro inside class with body
+==================
+
+class Foo
+  macro inherited
+    {{ raise "Cannot inherit" }}
+  end
+end
+
+---
+
+(source_file
+  (class_def
+    name: (type_name (constant))
+    (macro_def
+      name: (identifier)
+      (macro_body
+        (macro_plain_text)
+        (macro_expression)))))
+
+==================
+offsetof with instance variable
+==================
+
+offsetof(String, @c)
+
+---
+
+(source_file
+  (offsetof_expression
+    (type (constant))
+    (instance_variable)))
+
+==================
+Private enum
+==================
+
+private enum Color
+  Red
+  Green
+end
+
+---
+
+(source_file
+  (visibility_modifier
+    (enum_def
+      name: (constant)
+      (enum_member (constant))
+      (enum_member (constant)))))
+
+==================
+Visibility modifier on dot assignment
+==================
+
+protected self.x = 1
+
+---
+
+(source_file
+  (visibility_modifier
+    (assignment
+      (assignment_target
+        (dot_expression
+          (primary (self))
+          (identifier)))
+      (primary (integer_literal)))))
