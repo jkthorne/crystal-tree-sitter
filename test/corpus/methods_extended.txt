@@ -76,3 +76,71 @@ end
         name: (identifier)
         type: (type
           (constant))))))
+
+================================================================================
+Method with forall clause
+================================================================================
+
+def chunks(&block : T -> U) forall U
+end
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (method_def
+    name: (identifier)
+    (method_params
+      (param
+        (block_param_def
+          (identifier)
+          (type
+            (proc_type
+              (type
+                (constant))
+              (type
+                (constant)))))))
+    (forall_clause
+      (constant))))
+
+================================================================================
+Method with multiple forall type params
+================================================================================
+
+def map(x : T, y : U) forall T, U
+end
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (method_def
+    name: (identifier)
+    (method_params
+      (param
+        name: (identifier)
+        type: (type
+          (constant)))
+      (param
+        name: (identifier)
+        type: (type
+          (constant))))
+    (forall_clause
+      (constant)
+      (constant))))
+
+================================================================================
+Block with splat parameter
+================================================================================
+
+foo { |*args| args }
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (call
+    method: (identifier)
+    (block
+      (block_params
+        (block_param
+          (identifier)))
+      (primary
+        (identifier)))))

@@ -16,7 +16,8 @@ abstract def foo(x : T) : T forall T
           (constant))))
     return_type: (type
       (constant))
-    (constant)))
+    (forall_clause
+      (constant))))
 
 ==================
 Return with modifier if

@@ -355,7 +355,7 @@
       "required": false,
       "types": [
         {
-          "type": "constant",
+          "type": "forall_clause",
           "named": true
         },
         {
@@ -1327,6 +1327,21 @@
     }
   },
   {
+    "type": "forall_clause",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": true,
+      "required": true,
+      "types": [
+        {
+          "type": "constant",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
     "type": "fun_def",
     "named": true,
     "fields": {
@@ -1867,7 +1882,7 @@
       "required": false,
       "types": [
         {
-          "type": "constant",
+          "type": "forall_clause",
           "named": true
         },
         {

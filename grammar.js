@@ -434,6 +434,7 @@ module.exports = grammar({
     ),
 
     block_param: $ => seq(
+      optional('*'),
       $.identifier,
       optional(seq(':', $.type)),
     ),
@@ -651,7 +652,7 @@ module.exports = grammar({
       ),
       optional($.method_params),
       optional(seq(':', field('return_type', $.type))),
-      optional(seq('forall', commaSep1($.constant))),
+      optional($.forall_clause),
       optional($._body),
       'end',
     ),
@@ -671,8 +672,10 @@ module.exports = grammar({
       ),
       optional($.method_params),
       optional(seq(':', field('return_type', $.type))),
-      optional(seq('forall', commaSep1($.constant))),
+      optional($.forall_clause),
     )),
+
+    forall_clause: $ => prec.right(1, seq('forall', commaSep1($.constant))),
 
     operator_method_def: $ => choice(
       '+', '-', '*', '/', '//', '%', '**',
