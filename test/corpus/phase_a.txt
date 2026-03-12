@@ -1,0 +1,503 @@
+=====================================
+Scoped class definition
+=====================================
+
+class Foo::Bar
+end
+
+---
+
+(source_file
+  (class_def
+    name: (type_name
+      (scoped_type_name
+        (constant)
+        (constant)))))
+
+=====================================
+Deeply scoped class definition
+=====================================
+
+class Foo::Bar::Baz
+end
+
+---
+
+(source_file
+  (class_def
+    name: (type_name
+      (scoped_type_name
+        (scoped_type_name
+          (constant)
+          (constant))
+        (constant)))))
+
+=====================================
+Scoped module definition
+=====================================
+
+module HTTP::Client
+end
+
+---
+
+(source_file
+  (module_def
+    name: (type_name
+      (scoped_type_name
+        (constant)
+        (constant)))))
+
+=====================================
+Scoped struct definition
+=====================================
+
+struct Foo::Point
+end
+
+---
+
+(source_file
+  (struct_def
+    name: (type_name
+      (scoped_type_name
+        (constant)
+        (constant)))))
+
+=====================================
+Scoped enum definition
+=====================================
+
+enum Foo::Color
+  Red
+  Blue
+end
+
+---
+
+(source_file
+  (enum_def
+    name: (scoped_type_name
+      (constant)
+      (constant))
+    (enum_member
+      (constant))
+    (enum_member
+      (constant))))
+
+=====================================
+Scoped constant expression
+=====================================
+
+JSON::Builder
+
+---
+
+(source_file
+  (primary
+    (scoped_constant
+      (constant)
+      (constant))))
+
+=====================================
+Scoped constant method call
+=====================================
+
+JSON::Builder.new
+
+---
+
+(source_file
+  (dot_expression
+    receiver: (primary
+      (scoped_constant
+        (constant)
+        (constant)))
+    method: (identifier)))
+
+=====================================
+Method with question mark
+=====================================
+
+def empty?
+  true
+end
+
+---
+
+(source_file
+  (method_def
+    name: (method_identifier)
+    (primary
+      (bool_literal))))
+
+=====================================
+Method with bang
+=====================================
+
+def save!
+  true
+end
+
+---
+
+(source_file
+  (method_def
+    name: (method_identifier)
+    (primary
+      (bool_literal))))
+
+=====================================
+Setter method
+=====================================
+
+def name=(value)
+  @name = value
+end
+
+---
+
+(source_file
+  (method_def
+    name: (setter_method_name)
+    (method_params
+      (param
+        name: (identifier)))
+    (assignment
+      (assignment_target
+        (instance_variable))
+      (primary
+        (identifier)))))
+
+=====================================
+Self method with question mark
+=====================================
+
+def self.valid?
+  true
+end
+
+---
+
+(source_file
+  (method_def
+    name: (method_identifier)
+    (primary
+      (bool_literal))))
+
+=====================================
+Call method with question mark
+=====================================
+
+arr.empty?
+
+---
+
+(source_file
+  (dot_expression
+    receiver: (primary
+      (identifier))
+    method: (method_identifier)))
+
+=====================================
+Call method with bang
+=====================================
+
+list.sort!
+
+---
+
+(source_file
+  (dot_expression
+    receiver: (primary
+      (identifier))
+    method: (method_identifier)))
+
+=====================================
+Integer with type suffix u8
+=====================================
+
+x = 42_u8
+
+---
+
+(source_file
+  (assignment
+    (assignment_target
+      (identifier))
+    (primary
+      (integer_literal))))
+
+=====================================
+Integer with type suffix i64
+=====================================
+
+x = 1_000_i64
+
+---
+
+(source_file
+  (assignment
+    (assignment_target
+      (identifier))
+    (primary
+      (integer_literal))))
+
+=====================================
+Hex integer with suffix
+=====================================
+
+x = 0xff_u32
+
+---
+
+(source_file
+  (assignment
+    (assignment_target
+      (identifier))
+    (primary
+      (integer_literal))))
+
+=====================================
+Index assignment
+=====================================
+
+x[0] = 1
+
+---
+
+(source_file
+  (assignment
+    (assignment_target
+      (index_expression
+        receiver: (primary
+          (identifier))
+        (primary
+          (integer_literal))))
+    (primary
+      (integer_literal))))
+
+=====================================
+Index operator assignment
+=====================================
+
+x[0] += 1
+
+---
+
+(source_file
+  (operator_assignment
+    (assignment_target
+      (index_expression
+        receiver: (primary
+          (identifier))
+        (primary
+          (integer_literal))))
+    (primary
+      (integer_literal))))
+
+=====================================
+Dot assignment
+=====================================
+
+obj.name = value
+
+---
+
+(source_file
+  (assignment
+    (assignment_target
+      (dot_expression
+        receiver: (primary
+          (identifier))
+        method: (identifier)))
+    (primary
+      (identifier))))
+
+=====================================
+Symbol with question mark
+=====================================
+
+:empty?
+
+---
+
+(source_file
+  (primary
+    (symbol_literal)))
+
+=====================================
+Symbol with equals
+=====================================
+
+:name=
+
+---
+
+(source_file
+  (primary
+    (symbol_literal)))
+
+=====================================
+Symbol with bang
+=====================================
+
+:save!
+
+---
+
+(source_file
+  (primary
+    (symbol_literal)))
+
+=====================================
+When with dot method question
+=====================================
+
+case x
+when .nan?
+  1
+end
+
+---
+
+(source_file
+  (case_expression
+    value: (primary
+      (identifier))
+    (when_clause
+      (when_value
+        (method_identifier))
+      (then_block
+        (primary
+          (integer_literal))))))
+
+=====================================
+Arrow proc type in parameter
+=====================================
+
+def foo(cb : Int32 -> String)
+end
+
+---
+
+(source_file
+  (method_def
+    name: (identifier)
+    (method_params
+      (param
+        name: (identifier)
+        type: (type
+          (proc_type
+            (type
+              (constant))
+            (type
+              (constant))))))))
+
+=====================================
+No-arg arrow proc type
+=====================================
+
+def foo(cb : -> Nil)
+end
+
+---
+
+(source_file
+  (method_def
+    name: (identifier)
+    (method_params
+      (param
+        name: (identifier)
+        type: (type
+          (proc_type
+            (type
+              (constant))))))))
+
+=====================================
+Anonymous block with type
+=====================================
+
+def foo(& : IO ->)
+end
+
+---
+
+(source_file
+  (method_def
+    name: (identifier)
+    (method_params
+      (param
+        (block_param_def
+          (type
+            (proc_type
+              (type
+                (constant)))))))))
+
+=====================================
+Yield with expression
+=====================================
+
+yield @value
+
+---
+
+(source_file
+  (yield_expression
+    (primary
+      (instance_variable))))
+
+=====================================
+Scoped generic instance
+=====================================
+
+HTTP::Client::Response.new
+
+---
+
+(source_file
+  (dot_expression
+    receiver: (primary
+      (scoped_constant
+        (scoped_constant
+          (constant)
+          (constant))
+        (constant)))
+    method: (identifier)))
+
+=====================================
+Out argument
+=====================================
+
+LibC.foo(out x)
+
+---
+
+(source_file
+  (dot_expression
+    receiver: (primary
+      (constant))
+    method: (identifier)
+    arguments: (argument_list
+      (argument
+        (out_argument
+          (identifier))))))
+
+=====================================
+Short block with method question
+=====================================
+
+arr.select(&.empty?)
+
+---
+
+(source_file
+  (dot_expression
+    receiver: (primary
+      (identifier))
+    method: (identifier)
+    arguments: (argument_list
+      (argument
+        (block_argument
+          (short_block
+            method: (method_identifier)))))))
