@@ -555,19 +555,22 @@ module.exports = grammar({
     // explicit alternatives to prevent `return` from consuming `if_expression`
     // as its value argument.
     return_statement: $ => prec.left(choice(
-      seq('return', optional($.expression)),
+      seq('return', commaSep1($.expression)),
+      'return',
       seq('return', 'if', $.expression),
       seq('return', 'unless', $.expression),
     )),
 
     break_statement: $ => prec.left(choice(
-      seq('break', optional($.expression)),
+      seq('break', commaSep1($.expression)),
+      'break',
       seq('break', 'if', $.expression),
       seq('break', 'unless', $.expression),
     )),
 
     next_statement: $ => prec.left(choice(
-      seq('next', optional($.expression)),
+      seq('next', commaSep1($.expression)),
+      'next',
       seq('next', 'if', $.expression),
       seq('next', 'unless', $.expression),
     )),

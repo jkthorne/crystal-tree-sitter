@@ -2500,18 +2500,35 @@
                 "value": "return"
               },
               {
-                "type": "CHOICE",
+                "type": "SEQ",
                 "members": [
                   {
                     "type": "SYMBOL",
                     "name": "expression"
                   },
                   {
-                    "type": "BLANK"
+                    "type": "REPEAT",
+                    "content": {
+                      "type": "SEQ",
+                      "members": [
+                        {
+                          "type": "STRING",
+                          "value": ","
+                        },
+                        {
+                          "type": "SYMBOL",
+                          "name": "expression"
+                        }
+                      ]
+                    }
                   }
                 ]
               }
             ]
+          },
+          {
+            "type": "STRING",
+            "value": "return"
           },
           {
             "type": "SEQ",
@@ -2564,18 +2581,35 @@
                 "value": "break"
               },
               {
-                "type": "CHOICE",
+                "type": "SEQ",
                 "members": [
                   {
                     "type": "SYMBOL",
                     "name": "expression"
                   },
                   {
-                    "type": "BLANK"
+                    "type": "REPEAT",
+                    "content": {
+                      "type": "SEQ",
+                      "members": [
+                        {
+                          "type": "STRING",
+                          "value": ","
+                        },
+                        {
+                          "type": "SYMBOL",
+                          "name": "expression"
+                        }
+                      ]
+                    }
                   }
                 ]
               }
             ]
+          },
+          {
+            "type": "STRING",
+            "value": "break"
           },
           {
             "type": "SEQ",
@@ -2628,18 +2662,35 @@
                 "value": "next"
               },
               {
-                "type": "CHOICE",
+                "type": "SEQ",
                 "members": [
                   {
                     "type": "SYMBOL",
                     "name": "expression"
                   },
                   {
-                    "type": "BLANK"
+                    "type": "REPEAT",
+                    "content": {
+                      "type": "SEQ",
+                      "members": [
+                        {
+                          "type": "STRING",
+                          "value": ","
+                        },
+                        {
+                          "type": "SYMBOL",
+                          "name": "expression"
+                        }
+                      ]
+                    }
                   }
                 ]
               }
             ]
+          },
+          {
+            "type": "STRING",
+            "value": "next"
           },
           {
             "type": "SEQ",
