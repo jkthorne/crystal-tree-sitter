@@ -112,6 +112,13 @@ curl -sL "https://raw.githubusercontent.com/crystal-lang/crystal/master/src/json
 # array.cr:   2269 lines, 115 errors  (-50%)
 # json/builder.cr: 452 lines, 13 errors (-72%)
 # Test count: 159 (was 129)
+
+# After Phase B (2026-03-11)
+# string.cr:  5896 lines, 183 errors  (-21% from A, -75% from baseline)
+# int.cr:     2864 lines, 200 errors  (-12% from A, -21% from baseline)
+# array.cr:   2269 lines, 36 errors   (-69% from A, -84% from baseline)
+# json/builder.cr: 452 lines, 13 errors (unchanged)
+# Test count: 175 (was 159)
 ```
 
 ## Phase A Implementation Notes
@@ -138,3 +145,27 @@ curl -sL "https://raw.githubusercontent.com/crystal-lang/crystal/master/src/json
 ### Known remaining issues (pre-existing)
 - **Symbol in no-paren calls** — `puts :flush` fails because `:` is lexed separately.
   Needs external scanner to distinguish `:symbol` from `:` (type annotation).
+
+## Phase B Implementation Notes
+
+### Completed
+1. **Wrapping operators** — Added `&+`, `&-`, `&*`, `&**` to binary_expression, operator_assignment, and operator_method_def
+2. **Wrapping assignment operators** — Added `&+=`, `&-=`, `&*=`, `&**=`
+3. **Private/protected constants** — Added assignment and type_declaration to visibility_modifier choices
+4. **Private/protected enums** — Added enum_def to visibility_modifier
+5. **Top-level macro statements** — Added `macro_control_statement` (`{% ... %}`) and `macro_expression_statement` (`{{ ... }}`) as opaque tokens at statement level
+6. **Macro body fix** — Fixed `macro_body` regex swallowing `end` keyword, allowing macros inside class/module definitions
+7. **offsetof with instance variables** — Extended offsetof_expression to accept instance_variable
+8. **Macro `%` in content** — Fixed regex to allow `%` inside `{% %}` and `}` inside `{{ }}` blocks
+
+### Design Decision: Opaque Macro Tokens
+The `{% %}` and `{{ }}` blocks are parsed as opaque single tokens rather than structured AST nodes. This avoids lexer conflicts between `{% if %}` (structured) vs `{% code %}` (bare) while still allowing Crystal code between macro tags to parse correctly. The trade-off is that the macro control flow structure (if/else/end) isn't captured in the tree.
+
+### Remaining bottleneck: `{{ }}` inside expressions
+The dominant remaining error source is `{{ }}` used within expressions (e.g., `{{@type}}::MIN`, `to_unsigned_info({{unsigned_int_class}})`). As opaque tokens, these can't participate in expression context. This causes cascading parse failures — a single `{{ }}` inside an expression collapses the entire enclosing class/method definition. Fixing this requires external scanner support (Phase C/D).
+
+### Error analysis
+- **string.cr**: File-wide ERROR persists due to `{{ table.splat }}` at line 552
+- **int.cr**: File-wide ERROR from `{{@type}}::MIN` at line 151
+- **array.cr**: Most errors fixed; remaining are localized (36 errors in 2269 lines = 1.6%)
+- **json/builder.cr**: Unchanged (13 errors, mostly from `{{ }}` in expressions)
