@@ -24,6 +24,7 @@
   "module"
   "next"
   "of"
+  "out"
   "private"
   "protected"
   "require"
@@ -49,6 +50,8 @@
 ; Short block
 (short_block
   method: (identifier) @function.method.call)
+(short_block
+  method: (method_identifier) @function.method.call)
 
 ; Type declarations
 (type_declaration
@@ -86,6 +89,9 @@
 ; Comments
 (comment) @comment
 
+; Method identifiers (foo?, save!) used as expressions
+(method_identifier) @function.call
+
 ; Variables
 (identifier) @variable
 (instance_variable) @variable.member
@@ -99,16 +105,34 @@
 ; Method definitions
 (method_def
   name: (identifier) @function.method)
+(method_def
+  name: (method_identifier) @function.method)
+(method_def
+  name: (setter_method_name) @function.method)
 (abstract_def
   name: (identifier) @function.method)
+(abstract_def
+  name: (method_identifier) @function.method)
+(abstract_def
+  name: (setter_method_name) @function.method)
 
 ; Method calls
 (call
   method: (identifier) @function.call)
+(call
+  method: (method_identifier) @function.call)
 (dot_expression
   method: (identifier) @function.method.call)
 (dot_expression
+  method: (method_identifier) @function.method.call)
+(dot_expression
   method: (constant) @type)
+
+; Scoped constants
+(scoped_constant
+  (constant) @type)
+(scoped_type_name
+  (constant) @type)
 
 ; Parameters
 (param
