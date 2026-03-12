@@ -1637,6 +1637,10 @@
         {
           "type": "expression",
           "named": true
+        },
+        {
+          "type": "splat_argument",
+          "named": true
         }
       ]
     }

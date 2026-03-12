@@ -361,7 +361,7 @@ module.exports = grammar({
     index_expression: $ => prec.left(PREC.INDEX, seq(
       field('receiver', $.expression),
       '[',
-      commaSep($.expression),
+      commaSep(choice($.expression, $.splat_argument)),
       ']',
       optional('?'),
     )),
