@@ -890,7 +890,7 @@ module.exports = grammar({
 
     pointerof_expression: $ => seq('pointerof', '(', $.expression, ')'),
 
-    offsetof_expression: $ => seq('offsetof', '(', $.type, ',', $.identifier, ')'),
+    offsetof_expression: $ => seq('offsetof', '(', $.type, ',', choice($.identifier, $.instance_variable), ')'),
 
     uninitialized_expression: $ => seq('uninitialized', $.type),
 
