@@ -1,0 +1,283 @@
+================================================================================
+Private constant assignment
+================================================================================
+
+class Foo
+  private MAX_SIZE = 256
+end
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (class_def
+    name: (type_name
+      (constant))
+    (visibility_modifier
+      (assignment
+        (assignment_target
+          (constant))
+        (primary
+          (integer_literal))))))
+
+================================================================================
+Multiple return values from method
+================================================================================
+
+def find(key)
+  return entry, index
+end
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (method_def
+    name: (identifier)
+    (method_params
+      (param
+        name: (identifier)))
+    (return_statement
+      (primary
+        (identifier))
+      (primary
+        (identifier)))))
+
+================================================================================
+Instance variable access through other object
+================================================================================
+
+class Foo
+  def dup(other)
+    @data = other.@data
+  end
+end
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (class_def
+    name: (type_name
+      (constant))
+    (method_def
+      name: (identifier)
+      (method_params
+        (param
+          name: (identifier)))
+      (assignment
+        (assignment_target
+          (instance_variable))
+        (dot_expression
+          receiver: (primary
+            (identifier))
+          method: (instance_variable))))))
+
+================================================================================
+Nilable generic return type
+================================================================================
+
+def upsert(key, value) : Entry(K, V)?
+end
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (method_def
+    name: (identifier)
+    (method_params
+      (param
+        name: (identifier))
+      (param
+        name: (identifier)))
+    return_type: (type
+      (nilable_type
+        (type
+          (generic_type
+            (constant)
+            (type
+              (constant))
+            (type
+              (constant))))))))
+
+================================================================================
+Method with block and forall
+================================================================================
+
+def each_with_object(obj : T, &) forall T
+end
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (method_def
+    name: (identifier)
+    (method_params
+      (param
+        name: (identifier)
+        type: (type
+          (constant)))
+      (param
+        (block_param_def)))
+    (forall_clause
+      (constant))))
+
+================================================================================
+Parenthesized proc type in method param
+================================================================================
+
+def new(block : (Hash(K, V), K -> V)? = nil)
+end
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (method_def
+    name: (identifier)
+    (method_params
+      (param
+        name: (identifier)
+        type: (type
+          (nilable_type
+            (type
+              (proc_type
+                (type
+                  (generic_type
+                    (constant)
+                    (type
+                      (constant))
+                    (type
+                      (constant))))
+                (type
+                  (constant))
+                (type
+                  (constant))))))
+        default: (primary
+          (nil_literal))))))
+
+================================================================================
+Yield with multiple values in block
+================================================================================
+
+items.each { |item| yield item, index }
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (dot_expression
+    receiver: (primary
+      (identifier))
+    method: (identifier)
+    (block
+      (block_params
+        (block_param
+          (identifier)))
+      (yield_expression
+        (primary
+          (identifier))
+        (primary
+          (identifier))))))
+
+================================================================================
+Metaclass type in when clause
+================================================================================
+
+x.is_a?(String.class)
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (is_a_expression
+    (primary
+      (identifier))
+    (type
+      (metaclass_type
+        (type
+          (constant))))))
+
+================================================================================
+Splat in block params
+================================================================================
+
+chunks_internal(block) { |*kv| kv }
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (call
+    method: (identifier)
+    arguments: (argument_list
+      (argument
+        (primary
+          (identifier))))
+    (block
+      (block_params
+        (block_param
+          (identifier)))
+      (primary
+        (identifier)))))
+
+================================================================================
+Pointer type with generic
+================================================================================
+
+@entries = Pointer(Entry(K, V)).malloc(size)
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (assignment
+    (assignment_target
+      (instance_variable))
+    (dot_expression
+      receiver: (primary
+        (generic_instance
+          (constant)
+          (type
+            (generic_type
+              (constant)
+              (type
+                (constant))
+              (type
+                (constant))))))
+      method: (identifier)
+      arguments: (argument_list
+        (argument
+          (primary
+            (identifier)))))))
+
+================================================================================
+Empty array with type
+================================================================================
+
+result = [] of String
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (assignment
+    (assignment_target
+      (identifier))
+    (primary
+      (array_literal
+        (type
+          (constant))))))
+
+================================================================================
+Ternary with is_a? and method call
+================================================================================
+
+self.is_a?(Indexable) ? self.size : 0
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (conditional_expression
+    condition: (is_a_expression
+      (primary
+        (self))
+      (type
+        (constant)))
+    consequence: (dot_expression
+      receiver: (primary
+        (self))
+      method: (identifier))
+    alternative: (primary
+      (integer_literal))))

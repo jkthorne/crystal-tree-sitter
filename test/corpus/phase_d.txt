@@ -150,3 +150,47 @@ Macro interpolation chained dot call
   (dot_expression
     receiver: (primary (macro_expression_statement))
     method: (identifier)))
+
+================================================================================
+Macro control statement inside class body
+================================================================================
+
+class Foo
+  {% for x in %w(A B) %}
+    def foo
+    end
+  {% end %}
+end
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (class_def
+    name: (type_name
+      (constant))
+    (macro_statement
+      (macro_control_statement))
+    (method_def
+      name: (identifier))
+    (macro_statement
+      (macro_control_statement))))
+
+================================================================================
+Macro control statement at top level
+================================================================================
+
+{% for x in %w(A B) %}
+class Foo
+end
+{% end %}
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (macro_statement
+    (macro_control_statement))
+  (class_def
+    name: (type_name
+      (constant)))
+  (macro_statement
+    (macro_control_statement)))
