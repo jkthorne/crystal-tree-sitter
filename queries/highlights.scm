@@ -136,6 +136,8 @@
 
 ; Parameters
 (param
+  external_name: (identifier) @variable.parameter)
+(param
   name: (identifier) @variable.parameter)
 (block_param
   (identifier) @variable.parameter)
@@ -198,9 +200,9 @@
   "->"
 ] @operator
 
-; Macro statements
+; Macro statements and interpolation
 (macro_control_statement) @keyword.directive
-(macro_expression_statement) @keyword.directive
+(macro_expression_statement) @keyword.directive  ; {{ }} in expression or statement context
 
 ; Punctuation
 ["(" ")" "[" "]" "{" "}"] @punctuation.bracket
