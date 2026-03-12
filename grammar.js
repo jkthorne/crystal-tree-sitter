@@ -184,7 +184,7 @@ module.exports = grammar({
 
     operator_assignment: $ => prec.right(PREC.ASSIGN, seq(
       $.assignment_target,
-      choice('+=', '-=', '*=', '/=', '//=', '%=', '|=', '&=', '^=', '**=', '<<=', '>>=', '||=', '&&='),
+      choice('+=', '-=', '*=', '/=', '//=', '%=', '|=', '&=', '^=', '**=', '<<=', '>>=', '||=', '&&=', '&+=', '&-=', '&*=', '&**='),
       $.expression,
     )),
 
@@ -218,9 +218,9 @@ module.exports = grammar({
         [PREC.BIT_XOR, '^'],
         [PREC.BIT_AND, '&'],
         [PREC.SHIFT, choice('<<', '>>')],
-        [PREC.ADD, choice('+', '-')],
-        [PREC.MULTIPLY, choice('*', '/', '//', '%')],
-        [PREC.POWER, '**'],
+        [PREC.ADD, choice('+', '-', '&+', '&-')],
+        [PREC.MULTIPLY, choice('*', '/', '//', '%', '&*')],
+        [PREC.POWER, choice('**', '&**')],
       ];
 
       return choice(
@@ -578,6 +578,7 @@ module.exports = grammar({
 
     operator_method_def: $ => choice(
       '+', '-', '*', '/', '//', '%', '**',
+      '&+', '&-', '&*', '&**',
       '==', '!=', '<', '>', '<=', '>=', '<=>',
       '&', '|', '^', '~', '<<', '>>',
       '[]', '[]=', '[]?',
