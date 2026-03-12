@@ -281,3 +281,121 @@ self.is_a?(Indexable) ? self.size : 0
       method: (identifier))
     alternative: (primary
       (integer_literal))))
+
+================================================================================
+Splat in index expression
+================================================================================
+
+self[*foo(x)]
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (index_expression
+    receiver: (primary
+      (self))
+    (splat_argument
+      (call
+        method: (identifier)
+        arguments: (argument_list_no_parens
+          (argument
+            (primary
+              (parenthesized_expression
+                (primary
+                  (identifier))))))))))
+
+================================================================================
+When clause with implicit object method call
+================================================================================
+
+case value
+when .is_a?(String)
+  1
+end
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (case_expression
+    value: (primary
+      (identifier))
+    (when_clause
+      (when_value
+        (method_identifier)
+        (argument_list
+          (argument
+            (primary
+              (constant)))))
+      (then_block
+        (primary
+          (integer_literal))))))
+
+================================================================================
+When clause with operator method
+================================================================================
+
+case value
+when .>(5)
+  1
+end
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (case_expression
+    value: (primary
+      (identifier))
+    (when_clause
+      (when_value
+        (operator_method_def)
+        (argument_list
+          (argument
+            (primary
+              (integer_literal)))))
+      (then_block
+        (primary
+          (integer_literal))))))
+
+================================================================================
+Macro control blocks in method body
+================================================================================
+
+def foo
+  {% if flag?(:release) %}
+    optimized_code
+  {% else %}
+    debug_code
+  {% end %}
+end
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (method_def
+    name: (identifier)
+    (macro_control_statement)
+    (primary
+      (identifier))
+    (macro_control_statement)
+    (primary
+      (identifier))
+    (macro_control_statement)))
+
+================================================================================
+Multiple splats in index
+================================================================================
+
+arr[*a, *b]
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (index_expression
+    receiver: (primary
+      (identifier))
+    (splat_argument
+      (primary
+        (identifier)))
+    (splat_argument
+      (primary
+        (identifier)))))
