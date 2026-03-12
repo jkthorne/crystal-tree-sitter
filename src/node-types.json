@@ -3347,9 +3347,13 @@
     "named": true,
     "fields": {},
     "children": {
-      "multiple": false,
+      "multiple": true,
       "required": true,
       "types": [
+        {
+          "type": "argument_list",
+          "named": true
+        },
         {
           "type": "expression",
           "named": true
@@ -3360,6 +3364,10 @@
         },
         {
           "type": "method_identifier",
+          "named": true
+        },
+        {
+          "type": "operator_method_def",
           "named": true
         }
       ]

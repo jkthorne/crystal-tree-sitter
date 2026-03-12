@@ -501,6 +501,7 @@ module.exports = grammar({
     when_value: $ => choice(
       $.expression,
       seq('.', $._method_name),  // implicit enum member or method
+      seq('.', choice($._method_name, $.operator_method_def), $.argument_list),  // implicit object method call: .is_a?(Type), .>(5)
     ),
 
     while_expression: $ => seq(
